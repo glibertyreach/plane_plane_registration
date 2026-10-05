@@ -20,10 +20,9 @@ registration is wrong, so most of this procedure is about getting the table righ
 This procedure follows the stage-1 calibration capture procedure of the depth
 calibration project (repository `depth_calibration_from_spherical_target`, file
 `docs/procedures/stage1_capture_procedure.docx`; "the stage-1 procedure" below) in
-its layout and its tools; the board, its adapter and its tool frame are the same,
-except that the board may be thinner (6 mm instead of 15 mm; section 1 says why). A
-stage-1 board can be used as it is. The spheres and the three-ball nest are not
-needed here. You do not need to have read the stage-1 procedure; where this
+its layout and its tools; the board, its adapter and its tool frame are the same
+(section 1 repeats the board specification). A stage-1 board can be used as it is.
+The spheres and the three-ball nest are not needed here. You do not need to have read the stage-1 procedure; where this
 document points to it, it is for extra detail only.
 
 Terminology: in this project "registration" means finding the transform between the
