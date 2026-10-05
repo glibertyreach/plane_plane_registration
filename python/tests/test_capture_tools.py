@@ -69,6 +69,14 @@ SHIFT_TOLERANCE_MM = 0.5
 """How closely the offset residual of the shifted pose must show the shift."""
 SHIFTED_POSE_INDEX = 7
 """Index (in plan order) of the pose whose logged position is shifted."""
+FLANGE_OFFSET_MM = 6.0
+"""Distance D from the origin of the logged (flange-like) frame to the board's front face along its +z: the
+logged frame sits this far BEHIND the board face, so the software must shift the logged plane by +D."""
+FLANGE_RECOVERY_TRANSLATION_TOLERANCE_MM = 1.0
+"""With the right --target-offset-mm the recovered sensor-to-base translation is this close to the truth."""
+FLANGE_UNCORRECTED_MIN_TRANSLATION_ERROR_MM = 0.5 * FLANGE_OFFSET_MM
+"""Without --target-offset-mm the registration absorbs most of the constant offset D into the translation of the
+transform, so the transform is wrong by roughly D (at least half of it) while the residuals stay small."""
 PLAN_COUNT_RANGE = (150, 250)
 """'About 200 poses' for the default plan: the accepted range."""
 ROTATION_ATOL = 1.0e-9
@@ -216,6 +224,18 @@ def shifted_manifest(manifest: Path, pose_id: str, out: Path) -> Path:
     return write_manifest_json(out, records)
 
 
+def flange_logged_manifest(manifest: Path, out: Path, offset_mm: float = FLANGE_OFFSET_MM) -> Path:
+    """A copy of the manifest in which every logged pose is a flange-like frame ``offset_mm`` BEHIND the board face:
+    the logged origin is moved by -offset_mm along the board's own z axis (the rotation is unchanged). This is
+    what a technician logs when the controller reports the flange pose and the board face is ``offset_mm`` ahead
+    of the flange along its +z."""
+    records = load_manifest(manifest)
+    for record in records:
+        pose = record.target_pose_positioner
+        record.target_pose_positioner = RigidTransform(pose.rotation, pose.translation - offset_mm * pose.rotation[:, 2])
+    return write_manifest_json(out, records)
+
+
 def rotation_error_deg(a: RigidTransform, b: RigidTransform) -> float:
     return a.difference_from(b)[1]
 
@@ -309,7 +329,24 @@ def test_poses_csv_has_sphcal_columns_then_the_plan_columns(default_plan):
     assert columns == list(POSE_CSV_COLUMNS) + list(plan_poses.PLAN_EXTRA_COLUMNS)
     assert columns[-len(plan_poses.PLAN_EXTRA_COLUMNS):][:6] == ["standoff_mm", "tilt_deg", "azimuth_deg", "approach_x_mm",
                                                                  "approach_y_mm", "approach_z_mm"]
-    assert columns[-1] == "approach_r22"
+    assert columns[-1] == "approach_rotvec_z_deg"
+    # The approach rotation follows its matrix columns, in the order matrix, quaternion, rotation vector.
+    assert columns[columns.index("approach_r22") + 1:] == [
+        "approach_quat_w", "approach_quat_x", "approach_quat_y", "approach_quat_z",
+        "approach_rotvec_x_deg", "approach_rotvec_y_deg", "approach_rotvec_z_deg"]
+
+
+def test_approach_quaternion_and_rotation_vector_agree_with_the_approach_matrix(default_plan):
+    """The approach pose's quaternion (w >= 0) and rotation vector (degrees) describe the approach rotation matrix,
+    (SciPy's conventions, as sphcal's pose_row uses for the target pose's quat_* and rotvec_* columns)."""
+    for row in default_plan["rows"]:
+        matrix = row_transform(row, "approach_").rotation
+        quaternion = np.array([float(row[f"approach_quat_{axis}"]) for axis in "wxyz"])
+        rotation_vector_deg = np.array([float(row[f"approach_rotvec_{axis}_deg"]) for axis in "xyz"])
+        assert quaternion[0] >= 0.0 and np.isclose(np.linalg.norm(quaternion), 1.0, atol=ROTATION_ATOL)
+        # SciPy takes the scalar part last.
+        assert np.allclose(Rotation.from_quat(np.roll(quaternion, -1)).as_matrix(), matrix, atol=ROTATION_ATOL)
+        assert np.allclose(Rotation.from_rotvec(np.radians(rotation_vector_deg)).as_matrix(), matrix, atol=ROTATION_ATOL)
 
 
 def test_plan_summary_reports_spreads_errors_and_capture_totals(default_plan):
@@ -437,6 +474,34 @@ def test_bootstrap_exits_one_with_too_few_poses_and_two_on_bad_manifest(tmp_path
     assert "ERROR:" in capsys.readouterr().err
 
 
+def test_bootstrap_target_offset_option_is_parsed_into_the_parameters():
+    default = bootstrap.parameters_from_arguments(bootstrap.build_parser().parse_args(
+        ["--manifest", "m.json", "--out", "o.json"]))
+    given = bootstrap.parameters_from_arguments(bootstrap.build_parser().parse_args(
+        ["--manifest", "m.json", "--out", "o.json", "--target-offset-mm", str(FLANGE_OFFSET_MM)]))
+    assert default.target_offset_mm == bootstrap.BootstrapParameters().target_offset_mm == 0.0
+    assert given.target_offset_mm == FLANGE_OFFSET_MM
+
+
+def test_bootstrap_target_offset_corrects_a_logged_flange_pose(tmp_path):
+    """The logged poses are D behind the board face: --target-offset-mm D recovers the transform, and without it
+    the transform is off by about D (the constant offset is absorbed into the translation)."""
+    manifest = flange_logged_manifest(bootstrap_session(tmp_path), tmp_path / "flange_manifest.json")
+    corrected_out, plain_out = tmp_path / "corrected.json", tmp_path / "plain.json"
+    assert bootstrap.main(["--manifest", str(manifest), "--out", str(corrected_out),
+                           "--target-offset-mm", str(FLANGE_OFFSET_MM)]) == EXIT_OK
+    corrected = json.loads(corrected_out.read_text())
+    solved = RigidTransform.from_matrix(np.array(corrected["matrix"]).reshape(4, 4))
+    translation_error, rotation_error = solved.difference_from(TEST_SENSOR_TO_BASE)
+    assert rotation_error < RECOVERY_ROTATION_TOLERANCE_DEG and translation_error < FLANGE_RECOVERY_TRANSLATION_TOLERANCE_MM
+    assert corrected["rms_offset_residual_mm"] < FLANGE_RECOVERY_TRANSLATION_TOLERANCE_MM
+    # The same manifest without the option: the transform is wrong by about D.
+    bootstrap.main(["--manifest", str(manifest), "--out", str(plain_out)])
+    plain = json.loads(plain_out.read_text())
+    plain_solved = RigidTransform.from_matrix(np.array(plain["matrix"]).reshape(4, 4))
+    assert plain_solved.difference_from(TEST_SENSOR_TO_BASE)[0] > FLANGE_UNCORRECTED_MIN_TRANSLATION_ERROR_MM
+
+
 # ---------------------------------------------------------------------------
 # check_captures
 # ---------------------------------------------------------------------------
@@ -479,6 +544,34 @@ def test_check_flags_a_pose_whose_logged_position_was_shifted(session, rough_fil
     # Without the outlier rounds the wrong pose pulls the solution and the verdict is still flagged.
     assert check_captures.main(["--manifest", str(manifest), "--sensor-in-base", str(rough_file),
                                 "--outlier-rounds", "0"]) == EXIT_FLAGGED
+
+
+def test_check_target_offset_option_is_parsed_into_the_parameters():
+    default = check_captures.parameters_from_arguments(check_captures.build_parser().parse_args(["--manifest", "m.json"]))
+    given = check_captures.parameters_from_arguments(check_captures.build_parser().parse_args(
+        ["--manifest", "m.json", "--target-offset-mm", str(FLANGE_OFFSET_MM)]))
+    assert default.target_offset_mm == check_captures.CheckParameters().target_offset_mm == 0.0
+    assert given.target_offset_mm == FLANGE_OFFSET_MM
+
+
+def test_check_target_offset_corrects_a_logged_flange_pose(session, tmp_path, capsys):
+    """The logged poses are D behind the board face: with --target-offset-mm D the set passes and the recovered
+    transform is the true one; without it the recovered transform is off by about D."""
+    manifest = flange_logged_manifest(session["manifest"], tmp_path / "flange_manifest.json")
+    corrected_report, plain_report = tmp_path / "corrected.json", tmp_path / "plain.json"
+    code = check_captures.main(["--manifest", str(manifest), "--target-offset-mm", str(FLANGE_OFFSET_MM),
+                                "--out", str(corrected_report)])
+    printed = capsys.readouterr()
+    assert code == EXIT_OK, printed.out + printed.err
+    corrected = json.loads(corrected_report.read_text())
+    assert corrected["parameters"]["target_offset_mm"] == FLANGE_OFFSET_MM and corrected["n_flagged"] == 0
+    solved = RigidTransform.from_matrix(np.array(corrected["registration"]["sensor_to_base"]).reshape(4, 4))
+    assert solved.difference_from(TEST_SENSOR_TO_BASE)[0] < FLANGE_RECOVERY_TRANSLATION_TOLERANCE_MM
+    # The same manifest without the option: the transform is wrong by about D.
+    check_captures.main(["--manifest", str(manifest), "--out", str(plain_report)])
+    plain = json.loads(plain_report.read_text())
+    plain_solved = RigidTransform.from_matrix(np.array(plain["registration"]["sensor_to_base"]).reshape(4, 4))
+    assert plain_solved.difference_from(TEST_SENSOR_TO_BASE)[0] > FLANGE_UNCORRECTED_MIN_TRANSLATION_ERROR_MM
 
 
 def test_check_border_test_uses_the_mask_not_the_background(tmp_path, capsys):

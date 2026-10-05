@@ -1,9 +1,12 @@
 # Registration captures: step-by-step procedure
 
 Audience: the robot technician who will set up the board, program the robot, and
-record the captures. No knowledge of the registration math is needed. Where a step
-says "run", a computer with Python and this repository is needed (appendix B says
-how to set it up); the engineer can run those steps for you if you send the files.
+record the captures. No knowledge of the registration math is needed. Two people are
+referred to throughout: the technician (you), who sets up the board, programs the
+robot and records the captures; and the engineer, who runs the analysis and answers
+questions about the setup. Where a step says "run", a computer with Python and this
+repository is needed (appendix B says how to set it up); the engineer can run those
+steps for you if you send the files.
 
 What you are producing: two folders of sensor capture files (`.mc`), one group of
 files per robot pose, each folder with a small table (the manifest) that says, for
@@ -15,17 +18,21 @@ the robot, and the engineer compares the two. If the table is wrong, the
 registration is wrong, so most of this procedure is about getting the table right.
 
 This procedure follows the stage-1 calibration capture procedure of the depth
-calibration project in its layout and its tools; the board, its adapter and its tool
-frame are the same, except that the board may be thinner (6 mm instead of 15 mm;
-section 1 says why). A stage-1 board can be used as it is. The spheres and the
-three-ball nest are not needed here.
+calibration project (repository `depth_calibration_from_spherical_target`, file
+`docs/procedures/stage1_capture_procedure.docx`; "the stage-1 procedure" below) in
+its layout and its tools; the board, its adapter and its tool frame are the same,
+except that the board may be thinner (6 mm instead of 15 mm; section 1 says why). A
+stage-1 board can be used as it is. The spheres and the three-ball nest are not
+needed here. You do not need to have read the stage-1 procedure; where this
+document points to it, it is for extra detail only.
 
 Terminology: in this project "registration" means finding the transform between the
 sensor and the robot (the extrinsic parameters); "calibration" means finding the
 sensor's own internal parameters. This procedure is about registration only.
 
-Figure 1 (`figures/fig_approach.png`, section 6) shows the two ways of driving to a
-pose; figure 2 (section 5) shows an example pose plan.
+Figures: figure 1 (section 6) shows the two ways of driving to a pose; figure 2
+(section 5) shows an example pose plan; figure 3 (section 4) shows the two numbers
+the software reports for every pose.
 
 ---
 
@@ -39,15 +46,48 @@ pose; figure 2 (section 5) shows an example pose plan.
 | Board adapter | Plate that bolts to the flange with the dowel pins and holds the board with its front face perpendicular to the flange axis and its center on the flange axis | Three-point mounting (two dowels and a clamp) so the board goes back in the same place |
 | Dial indicator with magnetic base | 0.01 mm resolution | Board runout check |
 | Depth gauge or calipers | 0.02 mm resolution | Board offset D |
-| Capture computer | Runs the sensor's capture software, writes `.mc` files with the sensor's own name in the file name | At least 10 GB free per 1,000 frames |
+| Capture computer | Runs the sensor's capture software and writes one `.mc` file per capture; the files must be named by pose id (section 2 says how) | At least 10 GB free per 1,000 frames |
 
 Appendix A lists the software tools used in sections 4 to 8 and their options;
 appendix B says how to install them.
 
 ## 2. Before anything else
 
-Switch the sensor on and leave it running for at least 30 minutes before the first
-capture, and leave it running for the whole session. Note the time it was switched on.
+**Words used throughout.** A *capture* is one shot of the sensor; it produces one
+*frame* of 3D points, stored as one `.mc` file. Several captures are taken at each
+robot position without moving the robot (five per pose in the plan of section 5),
+so one pose gives several files. A *pose* is one position and orientation of the
+board; every pose has a short name, its *pose id* (for example `boot01` or
+`b_z0650_t24_a090_05`), which appears in the robot program, in the pose log and in
+the file names. The board's *normal* is the direction perpendicular to its front
+face, pointing out of the face toward the sensor. The *pose log* is the text table in
+which the robot program records the pose it reached (section 7), and the *manifest*
+is the table the software builds from the pose log and the capture files.
+
+**The session folder.** Make one working folder for the session (for example
+`reg_2026-10-05/`) and keep everything in it:
+
+- `session_notes.txt` (below);
+- `boot/` for the six captures of section 4, with `boot_pose_log.csv` and
+  `boot.json` next to it;
+- `plan/` for the pose plan of section 5;
+- `captures_A/` and `captures_B/` for the two capture runs of section 6, with
+  `pose_log_A.csv` and `pose_log_B.csv` next to them.
+
+Every command in this document is typed in that folder and names files relative to
+it.
+
+**File names.** Each capture file must be named `<pose_id>_Index<nn>.mc`, where
+`pose_id` is the id of the pose it was taken at and `nn` counts the frames of that
+pose from 00 (`boot01_Index00.mc`; `b_z0650_t24_a090_05_Index00.mc` to
+`..._Index04.mc`). Set the capture software's file-name prefix to the pose id
+before each pose, or, if the software insists on its own names, rename the files
+afterwards, before building the manifest. A file that is not named this way cannot
+be matched to a pose and is left out.
+
+**Sensor.** Switch the sensor on and leave it running for at least 30 minutes before
+the first capture, and leave it running for the whole session. Note the time it was
+switched on.
 
 Fix the sensor's exposure and gain to the values that will be used in production.
 Write them down. Do not use automatic exposure.
@@ -55,27 +95,27 @@ Write them down. Do not use automatic exposure.
 Switch off or block any sunlight or lamps that fall on the board. Room light is fine
 if it is constant.
 
-Confirm with the engineer what the robot base frame is (which frame the robot's
-position readout is in). Every pose in this procedure is recorded in that frame. Do
-not change the active base frame during the session.
+**Robot.** Confirm with the engineer what the robot base frame is (which frame the
+robot's position readout is in). Every pose in this procedure is recorded in that
+frame. Do not change the active base frame during the session.
 
 Leave the controller's backlash compensation (if it has such a setting) exactly as it
 is in production, and write down what it is set to. Do not change it between the two
 sub-procedures of section 6.
 
-Record in a text file (`session_notes.txt`): date, sensor serial number, exposure
-and gain, robot model and controller software version, the active base frame name,
-the backlash compensation setting, the board certificate (flatness), room
-temperature, and anything unusual.
+**Session notes.** Record in a text file (`session_notes.txt`): date, sensor serial
+number, exposure and gain, robot model and controller software version, the active
+base frame name, the backlash compensation setting, the board certificate (flatness),
+room temperature, and anything unusual.
 
 ## 3. Mounting the board and its tool frame
 
 The board's "tool frame" is a coordinate frame at the center of the board's front
-face, with its z axis pointing straight out of the face (toward the sensor when the
-board faces it), x along the long edge, y along the short edge. The robot must report
-the board's pose in this frame. This is the same frame as TOOL_BOARD of the stage-1
-procedure; if it is already defined on this robot with this board and adapter, check
-it (steps 2 and 3) and reuse it.
+face, with its z axis pointing straight out of the face (along the board's normal,
+toward the sensor when the board faces it), x along the long edge, y along the short
+edge. The robot must report the board's pose in this frame. This is the same frame
+as TOOL_BOARD of the stage-1 procedure; if it is already defined on this robot with
+this board and adapter, check it (steps 2 and 3) and reuse it.
 
 1. Mount the board adapter and the board on the flange with the dowel pins.
 2. Runout check: fix the dial indicator to the table with its tip on the board's
@@ -90,13 +130,19 @@ it (steps 2 and 3) and reuse it.
    half-sizes go in the pose log (100 and 75 mm for the recommended board).
 5. Define the tool frame in the robot: position (0, 0, D) from the flange,
    orientation: z along the flange axis pointing out of the board, x along the board's
-   long edge. An error of a few degrees in x is harmless (the board is symmetric); an
-   error in z is not.
+   long edge. How to set x: with the robot's "tool orientation by points" function,
+   teach a point at the center of the long edge, or enter the rotation about z that
+   aligns x with the long edge, after measuring with a square against the adapter.
+   An error of a few degrees in x is harmless (the board is symmetric); an error in z
+   is not.
 6. Save as TOOL_BOARD and write the numbers in the session notes.
 
-If the controller cannot define a tool frame and can only report the flange, log the
-flange pose instead and tell the engineer the value of D; the software has a setting
-for it (`--target-offset-mm`). Do not mix the two in one session.
+If the controller cannot define a tool frame and can only report the flange pose,
+log the flange pose instead and write "flange pose logged, D = ... mm" in the session
+notes. The software then has to move every logged pose forward by D along the
+flange's z axis: add `--target-offset-mm D` (D in millimeters) to every bootstrap and
+check command in sections 4 and 8, and the engineer adds it to the analysis. Do not
+mix the two kinds of pose in one session.
 
 ## 4. Finding where the sensor is (rough)
 
@@ -105,21 +151,52 @@ needs a rough idea first, so that the planned poses land in the sensor's field o
 view and so that the software knows where to look for the board in each capture.
 This step takes six captures of the board at hand-chosen poses.
 
-1. With TOOL_BOARD active, jog the board to a point roughly in front of the sensor,
-   about 600 mm away, near the middle of the picture, facing the sensor squarely.
-   Check on the capture computer's live view that the whole board is visible with
-   margin and that nothing else flat and large is closer to the sensor than the
-   board (a tabletop between the sensor and the board, for instance, must be out of
-   the picture or farther away than the board).
-2. Record a capture (one frame is enough), read the robot's reported tool pose
-   (position and orientation, in the base frame), and append it to the pose log
-   (section 7) with the pose id `boot01`. Name the file `boot01_Index00.mc`.
-3. Tilt the board about 20 degrees so that its top edge comes toward the sensor;
-   capture `boot02` and log the pose. Then about 20 degrees the other way (`boot03`);
-   then 20 degrees with the left edge toward the sensor (`boot04`); then the right
-   edge (`boot05`). Finally move the board about 250 mm farther from the sensor,
-   facing it squarely (`boot06`). Six poses, tilted in four directions and at two
-   distances.
+**What the software does with a capture, and the words it uses.** In every capture
+it looks for the board (*segmentation*: finding the flat patch of points that is the
+board, among whatever else is in view) and fits a plane to those points. How far the
+points scatter about that plane is the *plane residual* (in mm; a clean matte board
+gives a fraction of a millimeter). From the logged robot pose and the current idea
+of where the sensor is, it also *predicts* where the board plane should be in the
+sensor's view. The difference between the predicted plane and the measured plane is
+reported as two numbers (figure 3): the *normal residual*, the angle between the two
+planes in degrees, and the *offset residual*, the distance between them at the
+board's center in millimeters. Once the sensor's position has been solved from all
+the poses together, the two residuals of each pose say how well that pose agrees
+with the solution; a pose whose robot position was logged wrongly stands out by a
+large residual. The *valid fraction* of a pose is the share of its frames in which
+the board was found.
+
+![residuals](figures/fig_residuals.png)
+
+Figure 3. The two residuals reported for every pose: the angle between the board as
+the robot reports it and the board as the sensor sees it (normal residual), and the
+distance between the two planes at the board's center (offset residual).
+
+The steps. Directions such as "top edge" and "left edge" mean the edge nearest the
+top or the left of the sensor's picture as the capture software shows it. If the
+software has no live view, take a capture and open it in the software's viewer, or
+send the first file to the engineer, to see which way is up.
+
+1. Create the folder `boot/`. With TOOL_BOARD active, jog the board to a point
+   roughly in front of the sensor, about 600 mm away, near the middle of the picture,
+   facing the sensor squarely. Check on the capture computer's live view that the
+   whole board is visible with margin and that nothing else flat and large is closer
+   to the sensor than the board (a tabletop between the sensor and the board, for
+   instance, must be out of the picture or farther away than the board).
+2. Record one capture into `boot/` as `boot01_Index00.mc`. Read the robot's reported
+   tool pose (position and orientation, in the base frame) from the pendant and
+   write it as the first pose line of `boot_pose_log.csv`, in the format of
+   section 7 (read section 7 now: the file needs a header line, and one line per
+   pose with the pose id `boot01`, the board half-sizes, the position and the
+   orientation in the form your controller shows). The joint-angle columns are not
+   needed for these six poses.
+3. Tilt the board about 20 degrees so that its top edge comes toward the sensor,
+   keeping its center near the middle of the picture; capture `boot02` and log the
+   pose. Then about 20 degrees the other way, bottom edge toward the sensor
+   (`boot03`); then 20 degrees with the left edge toward the sensor (`boot04`); then
+   the right edge (`boot05`). Finally move the board about 250 mm farther from the
+   sensor, facing it squarely (`boot06`). Six poses, tilted in four directions and
+   at two distances, one capture each.
 4. Build the manifest and run the bootstrap (the engineer can do this):
 
 ```
@@ -130,19 +207,32 @@ python3 -m planereg.capture.bootstrap --manifest boot/manifest.csv \
 ```
 
 The bootstrap prints one line per pose with the board it found (how many pixels,
-how flat), and after solving, each pose's disagreement with the solution as an angle
-and a distance. They should be a fraction of a degree and a millimeter or two at
-most; a disagreement of several degrees or tens of millimeters means a pose was
-copied wrongly, the tool frame's z axis is wrong (section 3, step 5), or the board
-was not the closest flat surface in that capture. It also prints the "normal spread"
-of the six poses, which says whether the tilts were varied enough: it must be at
-least 0.05 (the tilts above give about 0.15). `boot.json` is the rough sensor
-position; the next steps read it.
+how flat), and after solving, each pose's normal and offset residual against the
+solution. They should be a fraction of a degree and a millimeter or two at most; a
+disagreement of several degrees or tens of millimeters means a pose was copied
+wrongly, the tool frame's z axis is wrong (section 3, step 5), or the board was not
+the closest flat surface in that capture. It also prints the "normal spread" of the
+six poses, a number between 0 and 0.58 that says how differently the board was
+tilted from pose to pose: it must be at least 0.05 (the tilts above give about
+0.15). `boot.json` is the rough sensor position; the next steps read it.
 
 ## 5. The pose plan
 
-Run the plan tool with the rough sensor position, one of the bootstrap captures (for
-the sensor's field of view) and the measured board half-sizes:
+The plan is the list of board poses the robot will visit. It is made by a program,
+the plan tool, from the rough sensor position of section 4, the sensor's field of
+view (read from one of the bootstrap captures) and the measured board half-sizes.
+Three words describe each planned pose:
+
+- the *standoff*: the distance from the sensor to the board's center, measured along
+  the sensor's viewing axis (the line out of the middle of the picture);
+- the *tilt*: the angle between the board's normal and the sensor's viewing axis; 0
+  means the board faces the sensor squarely;
+- the *azimuth*: for a tilted board, which edge leans toward the sensor, as an angle
+  in the board's own plane: 0 is the top edge toward the sensor, 90 the right edge,
+  180 the bottom edge, 270 the left edge ("top" and "left" as in the sensor's
+  picture, section 4).
+
+Run the plan tool:
 
 ```
 python3 -m planereg.capture.plan_poses --sensor-in-base boot.json \
@@ -156,11 +246,12 @@ default settings). The plan with the default settings is:
 
 The board at three standoffs from the sensor (550, 750 and 950 mm), at a 3 x 3 grid
 of lateral positions covering 50 percent of the field at each standoff, facing the
-sensor and tilted by 0, 15 and 30 degrees, the tilted poses in four directions (top,
-right, bottom and left edge toward the sensor): 9 orientations at each of 27
+sensor and tilted by 0, 15 and 30 degrees, the tilted poses at the four azimuths
+(top, right, bottom and left edge toward the sensor): 9 orientations at each of 27
 positions. Tilted boards that would leave the field of view are dropped
-automatically. About 20 percent of the poses are marked holdout in the table;
-capture them like all the others, the software keeps them for checking.
+automatically. About 20 percent of the poses are marked as *held out* in
+`poses.csv` (column `holdout`, value 1): capture them like all the others; the
+software keeps them aside for checking the result instead of fitting with them.
 
 What the plan tool prints. Besides the three files, the tool prints a plain-text
 summary to the screen and saves the same text as `plan/plan_summary.txt`. It is not
@@ -246,20 +337,44 @@ Figure 2. The planned board centers for the default settings, in the sensor's fr
 side view (left) and front view (right), with the field of view drawn. One color per
 standoff; held-out poses have an outline.
 
-Every row of `poses.csv` gives: `pose_id`, `kind` (always board), the board
-half-sizes, `holdout`, the position of the board tool frame in the base frame
-(`base_x_mm`, `base_y_mm`, `base_z_mm`) and its orientation three ways (rotation
-matrix `r00..r22`, quaternion, rotation vector; use whichever your robot program
-accepts), the standoff, tilt and azimuth the pose was planned with, and the
-**approach pose** for sub-procedure B: its position (`approach_x_mm`, `approach_y_mm`,
-`approach_z_mm`) and rotation matrix (`approach_r00..approach_r22`). Hand the file to
-whoever writes the robot program, or import it directly if the controller can read
-CSV.
+**The columns of `poses.csv`.** Every row is one pose. The robot program needs the
+pose id, the target pose, and (for sub-procedure B of section 6) the approach pose;
+the other columns are bookkeeping.
+
+| Columns | Meaning |
+|---|---|
+| `pose_id` | The pose's name; it goes in the pose log and in the file names |
+| `kind`, `radius_mm` | Always `board` and empty (the stage-1 tools also plan spheres) |
+| `half_width_mm`, `half_height_mm` | The board half-sizes you gave |
+| `holdout` | 1 for a held-out pose, 0 otherwise; capture both alike |
+| `base_x_mm`, `base_y_mm`, `base_z_mm` | Position of the board tool frame in the base frame, mm |
+| `r00` ... `r22` | Its orientation as a 3 x 3 rotation matrix, row by row (`r01` is row 0, column 1) |
+| `quat_w`, `quat_x`, `quat_y`, `quat_z` | The same orientation as a unit quaternion, scalar part first (`w` is never negative) |
+| `rotvec_x_deg`, `rotvec_y_deg`, `rotvec_z_deg` | The same orientation as a rotation vector: direction = axis, length = angle in degrees |
+| `sensor_x_mm`, `sensor_y_mm`, `sensor_z_mm` | The board center as seen from the sensor (for the picture; not needed by the robot) |
+| `standoff_mm`, `tilt_deg`, `azimuth_deg` | What the pose was planned as (see above) |
+| `approach_x_mm`, `approach_y_mm`, `approach_z_mm` | Position of the **approach pose** for sub-procedure B |
+| `approach_r00` ... `approach_r22`, `approach_quat_w` ... `approach_quat_z`, `approach_rotvec_x_deg` ... `approach_rotvec_z_deg` | Its orientation, in the same three forms |
+
+Use whichever orientation form your robot program accepts; all three describe the
+same rotation (tool frame to base frame). Hand the file to whoever writes the robot
+program, or import it directly if the controller can read CSV.
 
 ## 6. The two sub-procedures
 
 Every pose is captured twice, in two separate runs over the whole plan, with the
-sensor and the board untouched between them. Figure 1 shows the difference.
+sensor and the board untouched between them. Figure 1 shows the difference. Read
+section 7 (the pose log) before writing the robot program: the program has to write
+that file.
+
+**Triggering the captures.** Each robot program outline below has a step "trigger
+the capture of 5 frames". How this is done depends on the capture software: by a
+digital output of the robot wired to the capture computer, by a network command, or
+by the operator pressing a key when the robot program shows a prompt and waits.
+Any of the three is fine; what matters is that the capture is taken after the
+settling wait, before the robot moves on, and that the file-name prefix for the
+captures of that pose is the pose id (section 2). If the operator triggers by hand,
+the program should wait for a confirmation before moving on.
 
 ![approach](figures/fig_approach.png)
 
@@ -267,8 +382,8 @@ Figure 1. Left: sub-procedure A drives straight onto each target pose. Right:
 sub-procedure B drives to the approach pose first, then makes the same final move
 onto the target at every pose. (The approach rotation is exaggerated in the drawing.)
 
-**Sub-procedure A, "ignoring backlash".** Robot program outline, for each row of
-`poses.csv`:
+**Sub-procedure A, "ignoring backlash".** Uses only the target pose of each row of
+`poses.csv`; the approach columns are ignored. Robot program outline, for each row:
 
 1. Move to the target pose with one joint move, from wherever the robot is.
 2. Wait 1.5 seconds for vibration to settle.
@@ -307,42 +422,50 @@ every pose. Robot program outline, for each row:
 Use the same speed and acceleration settings in both sub-procedures. Do all of A,
 then all of B (or the other way round); do not interleave, and do not move the
 sensor or remount the board between them. At about 8 seconds per pose in A and 12 in
-B, the robot time for the default plan of about 240 poses is about 80 minutes in
-all; plan on about three hours including the setup and the checks.
+B, the robot time for the default plan (section 5 gives the exact pose count) is
+about 80 minutes in all; plan on about three hours including the setup and the
+checks.
 
-## 7. Recording the poses: the pose log and the manifest
+## 7. Recording the poses: the pose log
 
-The capture software writes the sensor data. The pose must be recorded separately,
-in one of two ways. Both are supported; use the first if the capture software can do it.
-
-Option A, pose in the file header. If the capture software can be given the robot's
-pose at capture time, it writes it into the file's header under the key `robotPose`
-as a 4 x 4 matrix (16 numbers, row by row: rotation in the top-left 3 x 3, position
-in the right column, last row 0 0 0 1), tool frame to base frame. Then the pose log
-is only needed for the joint angles.
-
-Option B, pose log plus manifest (preferred when option A is not available, and
-recommended anyway as a backup). The robot program appends one line per pose to a
-CSV file, the pose log, with these columns:
+The capture software writes the sensor data; the robot's pose has to be recorded
+separately, by the robot program, in a text table called the pose log. There is one
+pose log per capture folder (`boot_pose_log.csv`, `pose_log_A.csv`,
+`pose_log_B.csv`). It is a CSV file (comma-separated values, one header line, then
+one line per pose) with these columns:
 
 ```
 pose_id, kind, radius_mm, half_width_mm, half_height_mm,
-x_mm, y_mm, z_mm, rotation_type, r1, r2, r3, r4,
+x_mm, y_mm, z_mm, rotation_type, r1, r2, r3, r4, ..., r9,
 j1, j2, j3, j4, j5, j6, approach_j1, ..., approach_j6
 ```
 
 (one header line in the file; it is broken here only to fit the page)
 
-- `pose_id`: exactly the id from `poses.csv`, which is also the start of the file names.
+- `pose_id`: exactly the id from `poses.csv` (or `boot01`..`boot06` in section 4),
+  which is also the start of the file names.
 - `kind`: `board`. `radius_mm`: empty.
 - `half_width_mm`, `half_height_mm`: half the measured board size.
 - `x_mm`, `y_mm`, `z_mm`: the reported tool position in the base frame.
-- `rotation_type` and `r1..r4`: the reported tool orientation, in whatever form the
-  controller gives, named by one of: `quaternion_wxyz`, `quaternion_xyzw`,
-  `euler_zyx_deg` (KUKA A, B, C), `fixed_xyz_deg` (FANUC W, P, R), `euler_xyz_deg`,
-  `rotvec_deg`. Fill unused r columns with nothing.
+- `rotation_type` and `r1..r9`: the reported tool orientation, in whatever form the
+  controller gives, named by one of the words in the table below. Only as many r
+  columns as the form needs are filled; the header may stop at the last one used
+  (`r4` for a quaternion, `r3` for angles, `r9` for a matrix).
 - `j1..j6` and `approach_j1..approach_j6`: the joint angles in degrees, if the
   controller reports them; otherwise leave the columns out entirely.
+
+| `rotation_type` | `r1`, `r2`, `r3`, ... | Typical controller |
+|---|---|---|
+| `quaternion_wxyz` | w, x, y, z | ABB (its quaternion is in this order) |
+| `quaternion_xyzw` | x, y, z, w | some vision and ROS systems |
+| `euler_zyx_deg` | A, B, C | KUKA (A, B, C in degrees) |
+| `fixed_xyz_deg` | W, P, R | FANUC (W, P, R in degrees) |
+| `euler_xyz_deg` | a, b, c | controllers reporting X-Y-Z Euler angles |
+| `rotvec_deg` | x, y, z (length = angle in degrees) | Universal Robots; its rotation vector is in radians, multiply the three numbers by 57.2958 |
+| `matrix` | the 3 x 3 rotation matrix, row by row (9 numbers) | any controller that shows a matrix |
+
+If your controller is not in the table, ask the engineer which word applies; naming
+the form wrongly makes every pose disagree with the solution (section 8).
 
 Example line, one line in the file, broken here only to fit the page (the first
 part is the pose, the second the six joint angles at the target and the six at the
@@ -353,7 +476,8 @@ b_z0650_t24_a090_05,board,,100.0,75.0,850.11,-12.70,470.55,euler_zyx_deg,-91.3,1
 12.1,-35.6,88.2,3.4,41.0,-8.7,11.9,-36.0,88.9,3.1,40.5,-8.4
 ```
 
-After each sub-procedure, the manifest is built from its pose log and its capture folder:
+After each sub-procedure, the manifest is built from its pose log and its capture
+folder:
 
 ```
 python3 -m sphcal.cli.make_manifest --pose-log pose_log_A.csv \
@@ -370,6 +494,13 @@ poses stand in for the reported ones, which is acceptable only for a robot with
 absolute accuracy better than 0.1 mm, and it defeats the purpose of sub-procedure B.
 Extra columns such as the joint angles are carried along unchanged.
 
+Optional extra: if the capture software can be given the robot's pose at capture
+time, let it write the pose into each file's header as well, under the key
+`robotPose`, as a 4 x 4 matrix (16 numbers, row by row: rotation in the top-left
+3 x 3, position in the right column, last row 0 0 0 1), tool frame to base frame.
+The engineer can then cross-check the pose log against the headers. It does not
+replace the pose log: the tools above read the log.
+
 ## 8. Checking the captures before the analysis
 
 Run the quick check on each folder as soon as its captures are complete, while the
@@ -382,7 +513,8 @@ python3 -m planereg.capture.check_captures --manifest captures_B/manifest.csv \
     --sensor-in-base boot.json --pose-log pose_log_B.csv --out captures_B/check.json
 ```
 
-It prints one line per pose and a verdict. Things it flags, and what they mean:
+It prints one line per pose and a verdict. Things it flags, and what they mean (the
+words are those of section 4):
 
 - Low valid fraction (below 50 percent of frames): the board was not read; check
   exposure, or the board was outside the field.
@@ -416,8 +548,8 @@ it cannot read the manifest.
 ## 9. Deliverables checklist
 
 - `captures_A/` and `captures_B/` with all `.mc` files, named `<pose_id>_Index<nn>.mc`
-- `pose_log_A.csv` and `pose_log_B.csv` (option B), or confirmation that headers carry
-  `robotPose` (option A) plus the joint-angle logs
+- `pose_log_A.csv` and `pose_log_B.csv`, with the joint-angle columns when the
+  controller reports them
 - `captures_A/manifest.csv` and `captures_B/manifest.csv` produced by `make_manifest`
   without errors
 - `captures_A/check.json` and `captures_B/check.json` with no flags, or a note
@@ -425,9 +557,10 @@ it cannot read the manifest.
 - `plan/poses.csv`, `plan/plan_summary.txt`, `plan/plan.png` as used
 - `boot.json`, `boot_pose_log.csv` and the bootstrap captures in `boot/`
 - `session_notes.txt` with: sensor serial, warm-up time, exposure and gain, base
-  frame name, backlash compensation setting, board D and runout reading, board
-  dimensions and certificate, TOOL_BOARD values, temperature, robot speed and
-  acceleration settings, the order the sub-procedures were run in and their times
+  frame name, backlash compensation setting, board D and runout reading, whether the
+  flange pose was logged instead of TOOL_BOARD (section 3), board dimensions and
+  certificate, TOOL_BOARD values, temperature, robot speed and acceleration
+  settings, the order the sub-procedures were run in and their times
 - Photos of the setup: sensor mount, the board on the flange, the workspace behind
   the board as the sensor sees it
 
@@ -547,6 +680,7 @@ Output of `python3 -m planereg.capture.bootstrap --help`:
 usage: bootstrap.py [-h] --manifest PATH --out PATH
                     [--min-valid-fraction MIN_VALID_FRACTION]
                     [--border-margin-px BORDER_MARGIN_PX]
+                    [--target-offset-mm TARGET_OFFSET_MM]
                     [--min-pose-count MIN_POSE_COUNT]
                     [--min-normal-spread MIN_NORMAL_SPREAD]
                     [--max-rms-normal-deg MAX_RMS_NORMAL_DEG]
@@ -569,6 +703,12 @@ options:
   --border-margin-px BORDER_MARGIN_PX
                         warn when the board mask comes this close to the
                         image border (default 4)
+  --target-offset-mm TARGET_OFFSET_MM
+                        distance from the logged frame's origin to the
+                        board's front face along its +z, in mm; 0 when the
+                        logged frame is the board tool frame, the plate
+                        thickness D when the flange pose was logged
+                        (default 0.0)
   --min-pose-count MIN_POSE_COUNT
                         fewest segmented poses the registration may use
                         (default 4)
@@ -595,6 +735,7 @@ usage: check_captures.py [-h] --manifest PATH [--sensor-in-base PATH]
                          [--plane-rms-warn-mm PLANE_RMS_WARN_MM]
                          [--min-valid-fraction MIN_VALID_FRACTION]
                          [--border-margin-px BORDER_MARGIN_PX]
+                         [--target-offset-mm TARGET_OFFSET_MM]
                          [--normal-residual-warn-deg NORMAL_RESIDUAL_WARN_DEG]
                          [--offset-residual-warn-mm OFFSET_RESIDUAL_WARN_MM]
                          [--outlier-rounds OUTLIER_ROUNDS]
@@ -623,6 +764,12 @@ options:
   --border-margin-px BORDER_MARGIN_PX
                         flag a board mask within this many pixels of the
                         border (default 4)
+  --target-offset-mm TARGET_OFFSET_MM
+                        distance from the logged frame's origin to the
+                        board's front face along its +z, in mm; 0 when the
+                        logged frame is the board tool frame, the plate
+                        thickness D when the flange pose was logged
+                        (default 0.0)
   --normal-residual-warn-deg NORMAL_RESIDUAL_WARN_DEG
                         flag a pose whose normal residual exceeds this
                         (default 1.0)
@@ -640,8 +787,30 @@ options:
   --out PATH            write a JSON report here
 ```
 
-Output of `python3 -m sphcal.cli.make_manifest --help` is in the stage-1 procedure,
-appendix B.
+Output of `python3 -m sphcal.cli.make_manifest --help`:
+
+```
+usage: make_manifest.py [-h] --pose-log PATH --captures DIR
+                        [--format {csv,json}] --out PATH [--strict]
+
+Build the capture manifest from a pose log (CSV) and a directory of .mc
+capture files. The poses.csv written by plan_poses is accepted as a pose
+log.
+
+options:
+  -h, --help           show this help message and exit
+  --pose-log PATH      CSV with pose_id, kind, radius_mm, half_width_mm,
+                       half_height_mm, x_mm, y_mm, z_mm, rotation_type,
+                       r1..r4 (rotation_type: none, quaternion_wxyz,
+                       quaternion_xyzw, euler_zyx_deg, euler_xyz_deg,
+                       fixed_xyz_deg, rotvec_deg, matrix)
+  --captures DIR       directory of .mc files named
+                       <pose_id>_Index<frame>.mc
+  --format {csv,json}  manifest format
+  --out PATH           manifest file to write
+  --strict             treat warnings (missing or unmatched captures, non-
+                       unit quaternions) as errors
+```
 
 ## Appendix B. Installing and running the software, step by step
 
@@ -653,11 +822,12 @@ B.1 Install Python 3.10 or newer (stage-1 procedure, appendix C.1).
 
 B.2 Get the code: unzip the two archives the engineer sent, or clone the two
 repositories, side by side, somewhere without spaces in the path, for example
-`C:\cal\depth_calibration` and `C:\cal\flexible_plane_fit` on Windows or
-`~/cal/depth_calibration` and `~/cal/flexible_plane_fit` on Linux.
+`C:\cal\depth_calibration` and `C:\cal\plane_plane_registration` on Windows or
+`~/cal/depth_calibration` and `~/cal/plane_plane_registration` on Linux.
 
-B.3 Open a terminal in `flexible_plane_fit/python` (stage-1 procedure, appendix
-C.3). Check with `dir` (Windows) or `ls` (Linux) that `pyproject.toml` is listed.
+B.3 Open a terminal in `plane_plane_registration/python` (stage-1 procedure,
+appendix C.3). Check with `dir` (Windows) or `ls` (Linux) that `pyproject.toml` is
+listed.
 
 B.4 Make a private Python environment and install both packages into it:
 
@@ -671,7 +841,7 @@ python3 -m pip install -e ".[figures,test]"
 
 The prompt now starts with `(.venv)`; activate it again in every new terminal.
 
-B.5 Run the self-test, still in `flexible_plane_fit/python`:
+B.5 Run the self-test, still in `plane_plane_registration/python`:
 
 ```
 python3 -m pytest -q tests/test_capture_tools.py
@@ -683,12 +853,12 @@ and send it to the engineer. Do not start capturing until this passes.
 
 B.6 Run the tools as `python3 -m planereg.capture.<tool>` (and
 `python3 -m sphcal.cli.make_manifest`) followed by their options, as in sections 4
-to 8. With the environment active this works from any folder, so keep a working
-folder for the session with `boot/`, `plan/`, `captures_A/`, `captures_B/` and the
-pose logs in it, open the terminal there, and give file names relative to it. A
-message starting with `ERROR:` means the tool stopped and wrote nothing; it says what
-is wrong and which pose or file it concerns. A message starting with `WARNING:` means
-the tool finished but something should be looked at.
+to 8. With the environment active this works from any folder, so open the terminal
+in the session folder of section 2 and give file names relative to it, as the
+commands in this document do. A message starting with `ERROR:` means the tool
+stopped and wrote nothing; it says what is wrong and which pose or file it concerns.
+A message starting with `WARNING:` means the tool finished but something should be
+looked at.
 
 B.7 If something goes wrong: the stage-1 procedure's appendix C.7 applies unchanged
 (`No module named sphcal` or `No module named planereg` means the environment is not

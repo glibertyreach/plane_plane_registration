@@ -1,8 +1,8 @@
 """Fill the generated parts of registration_capture_procedure.md from the tools themselves,
 so that the document never quotes stale help text or plan numbers.
 
-Replaces the markers {{PLAN_HELP}}, {{BOOTSTRAP_HELP}}, {{CHECK_HELP}} with the tools'
---help output, and {{PLAN_PARAGRAPH}} with the counts and predicted errors of a plan run
+Replaces the markers {{PLAN_HELP}}, {{BOOTSTRAP_HELP}}, {{CHECK_HELP}} and {{MANIFEST_HELP}}
+with the tools' --help output (the last one from sphcal's make_manifest), and {{PLAN_PARAGRAPH}} with the counts and predicted errors of a plan run
 with the default settings on the indicative 640 x 480 sensor and a nominal sensor position;
 also writes figures/fig_plan_example.png from that run. The source of truth is the
 template registration_capture_procedure.template.md; this script writes the .md next to it.
@@ -41,7 +41,11 @@ EXAMPLE_SENSOR_TO_BASE = [
 EXAMPLE_FOV_DEG = ("49.9", "38.5")       # the indicative sensor's full field of view
 EXAMPLE_IMAGE_SIZE = ("640", "480")
 BOARD_HALF_SIZE_MM = ("100", "75")
-HELP_BLOCK = "Output of `python3 -m planereg.capture.{tool} --help`:\n\n```\n{text}```"
+HELP_BLOCK = "Output of `python3 -m {module} --help`:\n\n```\n{text}```"
+CAPTURE_PACKAGE = "planereg.capture"
+"""Package of the three capture tools quoted in appendix A."""
+MANIFEST_MODULE = "sphcal.cli.make_manifest"
+"""The sibling repository's manifest builder, also quoted in appendix A."""
 
 
 HELP_COLUMNS = "76"
@@ -51,11 +55,17 @@ SUMMARY_WRAP_COLUMNS = 84
 """Lines of the plan summary longer than this are wrapped (with their indent kept)."""
 
 
-def tool_help(tool: str) -> str:
+def module_help(module: str) -> str:
+    """The --help output of a module run with ``python3 -m``, quoted as a Markdown code block."""
     environment = {**os.environ, "COLUMNS": HELP_COLUMNS}
-    completed = subprocess.run([sys.executable, "-m", f"planereg.capture.{tool}", "--help"],
+    completed = subprocess.run([sys.executable, "-m", module, "--help"],
                                capture_output=True, text=True, check=True, env=environment)
-    return HELP_BLOCK.format(tool=tool, text=completed.stdout)
+    return HELP_BLOCK.format(module=module, text=completed.stdout)
+
+
+def tool_help(tool: str) -> str:
+    """The help of one of the capture tools (plan_poses, bootstrap, check_captures)."""
+    return module_help(f"{CAPTURE_PACKAGE}.{tool}")
 
 
 def wrap_summary(summary: str) -> str:
@@ -80,6 +90,9 @@ def example_plan(work: pathlib.Path) -> str:
                     "--fov-deg", *EXAMPLE_FOV_DEG, "--image-size", *EXAMPLE_IMAGE_SIZE,
                     "--board-half-size-mm", *BOARD_HALF_SIZE_MM, "--out", str(out)], check=True)
     summary = (out / "plan_summary.txt").read_text()
+    # The example was run from a temporary file; name the source generically instead, so that
+    # the copy kept in figures/ does not change from build to build.
+    summary = re.sub(r"matrix from \S+sensor\.json", "matrix from boot.json", summary)
     shutil.copy(out / "plan.png", FIGURE)
     SUMMARY_COPY.write_text(summary)
     return summary
@@ -88,8 +101,6 @@ def example_plan(work: pathlib.Path) -> str:
 def plan_paragraph(summary: str) -> str:
     """The example plan summary with an explanation of where it comes from and how to read it.
     The summary is quoted verbatim from the tool, so its numbers cannot drift from the code."""
-    # The example was run from a temporary file; name the source generically instead.
-    summary = re.sub(r"matrix from \S+sensor\.json", "matrix from boot.json", summary)
     lead = (
         "What the plan tool prints. Besides the three files, the tool prints a plain-text\n"
         "summary to the screen and saves the same text as `plan/plan_summary.txt`. It is not\n"
@@ -126,6 +137,7 @@ def main() -> int:
         "{{PLAN_HELP}}": tool_help("plan_poses"),
         "{{BOOTSTRAP_HELP}}": tool_help("bootstrap"),
         "{{CHECK_HELP}}": tool_help("check_captures"),
+        "{{MANIFEST_HELP}}": module_help(MANIFEST_MODULE),
         "{{PLAN_PARAGRAPH}}": plan_paragraph(summary),
     }
     for marker, value in replacements.items():

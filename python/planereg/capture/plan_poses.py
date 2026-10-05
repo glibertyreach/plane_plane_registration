@@ -50,8 +50,13 @@ The two sub-procedures and the approach pose (design Section 6)
 Outputs in --out
     poses.csv         sphcal's POSE_CSV_COLUMNS (so ``sphcal.cli.make_manifest`` accepts it as a pose
                       log unchanged) followed by standoff_mm, tilt_deg, azimuth_deg,
-                      approach_x_mm, approach_y_mm, approach_z_mm and approach_r00..approach_r22
-                      (the approach pose in B, row-major rotation).
+                      approach_x_mm, approach_y_mm, approach_z_mm, approach_r00..approach_r22
+                      (the approach pose in B, row-major rotation), approach_quat_w..approach_quat_z
+                      (the same rotation as a unit quaternion with w >= 0) and
+                      approach_rotvec_x_deg..approach_rotvec_z_deg (the same rotation as a rotation
+                      vector in degrees). The quaternion and the rotation vector are computed in the
+                      same way as the target pose's quat_* and rotvec_* columns, so that a controller
+                      that takes either form can be fed the approach pose too.
     plan_summary.txt  counts per standoff and tilt, dropped poses, normal spread and similarity spread
                       of the planned set, predicted registration error, capture counts.
     plan.png          side and front views of the board centers and outlines in the field of view.
@@ -90,9 +95,13 @@ PLAN_FIGURE_NAME = "plan.png"
 
 PLAN_EXTRA_COLUMNS = (
     ("standoff_mm", "tilt_deg", "azimuth_deg", "approach_x_mm", "approach_y_mm", "approach_z_mm")
-    + tuple(f"approach_r{row}{col}" for row in range(3) for col in range(3)))
+    + tuple(f"approach_r{row}{col}" for row in range(3) for col in range(3))
+    + ("approach_quat_w", "approach_quat_x", "approach_quat_y", "approach_quat_z",
+       "approach_rotvec_x_deg", "approach_rotvec_y_deg", "approach_rotvec_z_deg"))
 """Columns of poses.csv after sphcal's POSE_CSV_COLUMNS: the plan coordinates of the pose and the
-approach pose in the base frame (position, then the rotation matrix row-major)."""
+approach pose in the base frame (position, the rotation matrix row-major, the unit quaternion
+w, x, y, z with w >= 0, and the rotation vector in degrees). The target pose has the same three
+rotation forms in sphcal's columns."""
 
 BOARD_X_AXIS = np.eye(3)[0]
 """The board's x axis (long edge) in the board frame; the approach rotation is about it."""
@@ -380,6 +389,18 @@ def largest_incidence_degrees(poses: list[SensorPose]) -> float:
 # ---------------------------------------------------------------------------
 # Outputs
 # ---------------------------------------------------------------------------
+def rotation_as_quaternion_and_rotation_vector(rotation: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
+    """The unit quaternion (w, x, y, z) with w >= 0 and the rotation vector in degrees of a rotation
+    matrix, computed exactly as sphcal's ``pose_row`` does for the target pose."""
+    scipy_rotation = Rotation.from_matrix(rotation)
+    quaternion_xyzw = scipy_rotation.as_quat()                  # SciPy orders the scalar part last
+    quaternion_wxyz = np.roll(quaternion_xyzw, 1)               # move the scalar part to the front
+    if quaternion_wxyz[0] < 0.0:
+        quaternion_wxyz = -quaternion_wxyz                      # q and -q are the same rotation; take w >= 0
+    rotation_vector_deg = np.degrees(scipy_rotation.as_rotvec())
+    return quaternion_wxyz, rotation_vector_deg
+
+
 def csv_row(pose: SensorPose, sensor_to_base: RigidTransform, params: PlanParameters) -> list:
     """One poses.csv row: sphcal's columns (target pose in B) and then PLAN_EXTRA_COLUMNS."""
     sphcal_pose = PlannedPose(pose_id=pose.pose_id, kind=TARGET_KIND_BOARD, radius_mm=None,
@@ -389,8 +410,10 @@ def csv_row(pose: SensorPose, sensor_to_base: RigidTransform, params: PlanParame
     row = pose_row(sphcal_pose, sensor_to_base)
     target = sensor_to_base.compose(RigidTransform(pose.board_to_sensor, pose.center_sensor))
     approach = approach_pose_in_base(target, params.approach_retreat_mm, params.approach_rotation_deg)
+    approach_quaternion, approach_rotation_vector_deg = rotation_as_quaternion_and_rotation_vector(approach.rotation)
     return (row + [pose.standoff_mm, pose.tilt_deg, pose.azimuth_deg]
-            + [float(x) for x in np.concatenate([approach.translation, approach.rotation.reshape(-1)])])
+            + [float(x) for x in np.concatenate([approach.translation, approach.rotation.reshape(-1),
+                                                 approach_quaternion, approach_rotation_vector_deg])])
 
 
 def write_poses_csv(path: Path, poses: list[SensorPose], sensor_to_base: RigidTransform,

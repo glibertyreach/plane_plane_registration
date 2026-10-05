@@ -186,7 +186,10 @@ with the rough transform.
 Outputs in `--out`: `poses.csv` with sphcal's `POSE_CSV_COLUMNS` (so
 `sphcal.cli.make_manifest` accepts it as a pose log) **plus** the columns
 `standoff_mm, tilt_deg, azimuth_deg, approach_x_mm, approach_y_mm, approach_z_mm,
-approach_r00..approach_r22` (the approach pose in B, row-major rotation);
+approach_r00..approach_r22, approach_quat_w..approach_quat_z,
+approach_rotvec_x_deg..approach_rotvec_z_deg` (the approach pose in B: row-major
+rotation, unit quaternion with w >= 0, and rotation vector in degrees, the same three
+forms as the target pose);
 `plan_summary.txt` (counts per standoff and tilt, dropped poses, the plan's normal
 spread, its similarity spread, the predicted rotation and translation RMS error from
 `expected_registration_error`, and a line saying how many poses the two sub-procedures
@@ -197,7 +200,9 @@ distinguished; one hue per standoff, legend present).
 ### 7.2 `capture/bootstrap.py`
 
 Inputs: `--manifest PATH` (made by `make_manifest` from 4 or more hand-jogged board
-captures), `--out PATH` (JSON), registration thresholds as options. Runs
+captures), `--out PATH` (JSON), registration thresholds as options, and
+`--target-offset-mm D` (0 for a logged board tool frame, the plate thickness D when the
+flange pose was logged; it reaches `PipelineParameters.target_offset_mm`). Runs
 `measure_all` without a prediction, `register_measurements` (rigid), prints a table
 (pose, method, pixels, plane RMS, normal residual, offset residual) and the
 transform, writes `{"matrix": [...], "residuals": {...}, "normal_spread": ...}`. Exit
@@ -209,7 +214,8 @@ tool frame).
 Inputs: `--manifest`, `--sensor-in-base PATH` (optional; enables the predicted region),
 `--pose-log PATH` (optional; for the joint-sign report), thresholds (segmentation RMS
 warn 1.0 mm, min valid fraction 0.5, border margin 4 px, normal residual warn 1.0
-deg, offset residual warn 1.0 mm), `--out PATH`.
+deg, offset residual warn 1.0 mm), `--target-offset-mm D` as in the bootstrap,
+`--out PATH`.
 
 Per pose: frames, valid fraction, segmentation method and pixels, plane RMS, border
 contact of the mask, flags (unreadable, low valid, border, segmentation failed, plane

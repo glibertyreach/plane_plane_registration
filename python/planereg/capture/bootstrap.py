@@ -2,7 +2,8 @@
 Command line: find the sensor roughly in the robot base frame from a few hand-jogged board captures
 (code design, bootstrap tool).
 
-    python3 -m planereg.capture.bootstrap --manifest manifest.json --out sensor_in_base.json
+    python3 -m planereg.capture.bootstrap --manifest manifest.json --out sensor_in_base.json \
+        [--target-offset-mm D]
 
 What it does
 ------------
@@ -32,6 +33,11 @@ The thresholds here are looser than the registration defaults on purpose: the bo
 only has to be good enough to PREDICT where the board is in later captures, and the predicted region
 of the segmentation tolerates about 2 degrees and 20 mm (code design, Section 9). Every threshold
 is a command-line option.
+
+Logged frame. The manifest's pose is normally the board tool frame (origin at the center of the board's
+front face). If the controller can only report the flange pose, log that and pass ``--target-offset-mm D``
+with D the distance from the flange origin to the board's front face along the flange +z (the plate
+thickness); every logged plane is then shifted by D along the logged frame's +z.
 
 Frames: the sensor frame S (the frame of the points in a capture) and the base frame B; the manifest's
 target pose is the board tool frame T -> B. Units: millimeters, degrees.
@@ -81,6 +87,10 @@ class BootstrapParameters:
     """A pixel enters the temporal mean only if valid in at least this fraction of the frames."""
     border_margin_px: int = DEFAULT_BORDER_MARGIN_PX
     """A board whose mask comes this close to the image border is reported as partly out of view."""
+    target_offset_mm: float = 0.0
+    """Distance from the logged frame's origin to the board's front face along the logged frame's +z, in mm:
+    0 when the logged pose is the board tool frame, the flange-to-board-face distance D when the controller
+    can only report the flange pose (``PipelineParameters.target_offset_mm``)."""
     minimum_pose_count: int = MINIMUM_BOOTSTRAP_POSES
     """Fewest segmented poses the registration may use."""
     minimum_normal_spread: float = 0.05
@@ -185,6 +195,10 @@ def build_parser() -> argparse.ArgumentParser:
                         help="a pixel must be valid in this fraction of a pose's frames (default %(default)s)")
     parser.add_argument("--border-margin-px", type=int, default=d.border_margin_px,
                         help="warn when the board mask comes this close to the image border (default %(default)s)")
+    parser.add_argument("--target-offset-mm", type=float, default=d.target_offset_mm,
+                        help="distance from the logged frame's origin to the board's front face along its +z, in mm; "
+                             "0 when the logged frame is the board tool frame, the plate thickness D when the "
+                             "flange pose was logged (default %(default)s)")
     parser.add_argument("--min-pose-count", type=int, default=d.minimum_pose_count,
                         help="fewest segmented poses the registration may use (default %(default)s)")
     parser.add_argument("--min-normal-spread", type=float, default=d.minimum_normal_spread,
@@ -204,7 +218,7 @@ def parameters_from_arguments(args: argparse.Namespace) -> BootstrapParameters:
     """The BootstrapParameters of the parsed command line."""
     return BootstrapParameters(
         min_valid_fraction=args.min_valid_fraction, border_margin_px=args.border_margin_px,
-        minimum_pose_count=args.min_pose_count, minimum_normal_spread=args.min_normal_spread,
+        target_offset_mm=args.target_offset_mm, minimum_pose_count=args.min_pose_count, minimum_normal_spread=args.min_normal_spread,
         max_rms_normal_residual_deg=args.max_rms_normal_deg, max_rms_offset_residual_mm=args.max_rms_offset_mm,
         max_normal_residual_deg=args.max_normal_deg, max_offset_residual_mm=args.max_offset_mm)
 
@@ -225,7 +239,8 @@ def main(argv: list[str] | None = None) -> int:
     if not capture_set.records:
         print_error(f"the manifest {args.manifest} lists no board captures.")
         return EXIT_INPUT_ERROR
-    pipeline = PipelineParameters(min_valid_fraction=params.min_valid_fraction, border_margin_px=params.border_margin_px)
+    pipeline = PipelineParameters(min_valid_fraction=params.min_valid_fraction, border_margin_px=params.border_margin_px,
+                                  target_offset_mm=params.target_offset_mm)
     measurements = measure_all(capture_set, pipeline)          # no prediction: the closest large plane
     for m in measurements:
         if not m.ok:

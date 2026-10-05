@@ -2,7 +2,8 @@
 Command line: a quick check of a capture set before the long registration (code design, check tool).
 
     python3 -m planereg.capture.check_captures --manifest manifest.json \
-        [--sensor-in-base sensor_in_base.json] [--pose-log pose_log.csv] --out check.json
+        [--sensor-in-base sensor_in_base.json] [--pose-log pose_log.csv] [--target-offset-mm D] \
+        --out check.json
 
 What it checks, per pose (the frames of one commanded pose)
     frames          number of capture files of the pose.
@@ -18,6 +19,12 @@ What it checks, per pose (the frames of one commanded pose)
                     the board is partly out of view.
     flags           unreadable, low valid fraction, border contact, segmentation failed, plane RMS
                     above its limit.
+
+Logged frame. The manifest's pose is normally the board tool frame (origin at the center of the board's
+front face). If the controller can only report the flange pose, log that and pass ``--target-offset-mm D``
+with D the distance from the flange origin to the board's front face along the flange +z (the plate
+thickness); every logged plane is then shifted by D along the logged frame's +z. Without it, such a
+session shows an offset residual of about D at every pose.
 
 Then the poses whose segmentation succeeded are registered (rigid model): per pose the normal
 residual (angle between the rotated measured normal and the logged normal) and the offset residual,
@@ -101,6 +108,10 @@ class CheckParameters:
     fraction are left out of the temporal-mean image."""
     border_margin_px: int = DEFAULT_BORDER_MARGIN_PX
     """Mask pixels this close to the image border mean the board is cut off."""
+    target_offset_mm: float = 0.0
+    """Distance from the logged frame's origin to the board's front face along the logged frame's +z, in mm:
+    0 when the logged pose is the board tool frame, the flange-to-board-face distance D when the controller
+    can only report the flange pose (``PipelineParameters.target_offset_mm``)."""
     normal_residual_warn_deg: float = 1.0
     """Flag a pose whose normal residual after the registration exceeds this."""
     offset_residual_warn_mm: float = 1.0
@@ -347,6 +358,10 @@ def build_parser() -> argparse.ArgumentParser:
                         help="flag a pose valid in a smaller fraction of its frames (default %(default)s)")
     parser.add_argument("--border-margin-px", type=int, default=d.border_margin_px,
                         help="flag a board mask within this many pixels of the border (default %(default)s)")
+    parser.add_argument("--target-offset-mm", type=float, default=d.target_offset_mm,
+                        help="distance from the logged frame's origin to the board's front face along its +z, in mm; "
+                             "0 when the logged frame is the board tool frame, the plate thickness D when the "
+                             "flange pose was logged (default %(default)s)")
     parser.add_argument("--normal-residual-warn-deg", type=float, default=d.normal_residual_warn_deg,
                         help="flag a pose whose normal residual exceeds this (default %(default)s)")
     parser.add_argument("--offset-residual-warn-mm", type=float, default=d.offset_residual_warn_mm,
@@ -364,7 +379,8 @@ def parameters_from_arguments(args: argparse.Namespace) -> CheckParameters:
     """The CheckParameters of the parsed command line."""
     return CheckParameters(
         plane_rms_warn_mm=args.plane_rms_warn_mm, min_valid_fraction=args.min_valid_fraction,
-        border_margin_px=args.border_margin_px, normal_residual_warn_deg=args.normal_residual_warn_deg,
+        border_margin_px=args.border_margin_px, target_offset_mm=args.target_offset_mm,
+        normal_residual_warn_deg=args.normal_residual_warn_deg,
         offset_residual_warn_mm=args.offset_residual_warn_mm, outlier_rounds=args.outlier_rounds,
         joint_sign_warn_fraction=args.joint_sign_warn_fraction)
 
@@ -406,7 +422,8 @@ def main(argv: list[str] | None = None) -> int:
         else:
             joint_rows = joint_sign_rows(motions)
 
-    pipeline = PipelineParameters(min_valid_fraction=params.min_valid_fraction, border_margin_px=params.border_margin_px)
+    pipeline = PipelineParameters(min_valid_fraction=params.min_valid_fraction, border_margin_px=params.border_margin_px,
+                                  target_offset_mm=params.target_offset_mm)
     measurements = measure_all(capture_set, pipeline, rough)
     checks = [check_pose(m, params) for m in measurements]
     result, used_ids = register_measurements(measurements, registration_parameters(params))
