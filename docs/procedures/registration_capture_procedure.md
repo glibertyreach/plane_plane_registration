@@ -108,6 +108,26 @@ number, exposure and gain, robot model and controller software version, the acti
 base frame name, the backlash compensation setting, the board certificate (flatness),
 room temperature, and anything unusual.
 
+**Software.** Before the first command of section 4, do appendix B once on the
+computer that will run the tools: install the two packages and run the self-test.
+Every command in this document is then typed in a terminal opened in the session
+folder, with the environment of appendix B.4 active (the prompt starts with
+`(.venv)`). The table below is the whole of what gets run, in order; each row points
+to the section that gives the full command and explains its output. Any row can be
+run by the engineer instead, if you send the files it reads.
+
+| When | Command | Reads | Writes | Section |
+|---|---|---|---|---|
+| Once, before section 4 | install and self-test | the two repositories | the environment `.venv` | appendix B |
+| After the six boot captures | `sphcal.cli.make_manifest` | `boot_pose_log.csv`, `boot/` | `boot/manifest.csv` | 4, step 4 |
+| Right after that | `planereg.capture.bootstrap` | `boot/manifest.csv` | `boot.json` (rough sensor position) | 4, step 4 |
+| Before programming the robot | `planereg.capture.plan_poses` | `boot.json`, one boot capture | `plan/poses.csv`, `plan_summary.txt`, `plan.png` | 5 |
+| After each sub-procedure (A, then B) | `sphcal.cli.make_manifest` | `pose_log_A.csv`, `captures_A/` (same for B) | `captures_A/manifest.csv` | 7 |
+| Right after that, board still mounted | `planereg.capture.check_captures` | the manifest, `boot.json`, the pose log | `captures_A/check.json` and a verdict | 8 |
+
+Each command is run as `python3 -m <command> <options>`; the sections give the
+options.
+
 ## 3. Mounting the board and its tool frame
 
 The board's "tool frame" is a coordinate frame at the center of the board's front
@@ -207,7 +227,7 @@ send the first file to the engineer, to see which way is up.
    the right edge (`boot05`). Finally move the board about 250 mm farther from the
    sensor, facing it squarely (`boot06`). Six poses, tilted in four directions and
    at two distances, one capture each.
-4. Build the manifest and run the bootstrap (the engineer can do this):
+4. Build the manifest and run the bootstrap (section 2 says where to type this):
 
 ```
 python3 -m sphcal.cli.make_manifest --pose-log boot_pose_log.csv \
@@ -404,6 +424,10 @@ onto the target at every pose. (The approach rotation is exaggerated in the draw
    pose log `pose_log_A.csv` (section 7).
 5. Move on.
 
+When the last pose of A is done, and before starting B, build the manifest of
+`captures_A/` (section 7) and run the check on it (section 8), while the board is
+still mounted and flagged poses can be re-captured cheaply.
+
 **Sub-procedure B, "minimizing backlash".** The idea: gear backlash means the flange
 can sit on either side of a small dead band after a move, depending on which way each
 joint last moved. Approaching every target pose with the same final move makes the
@@ -428,6 +452,9 @@ every pose. Robot program outline, for each row:
    The check tool uses them to confirm that each joint's final motion had the same
    direction at every pose.
 7. Move on.
+
+When the last pose of B is done, build the manifest of `captures_B/` and run the
+check on it, as after A.
 
 Use the same speed and acceleration settings in both sub-procedures. Do all of A,
 then all of B (or the other way round); do not interleave, and do not move the
