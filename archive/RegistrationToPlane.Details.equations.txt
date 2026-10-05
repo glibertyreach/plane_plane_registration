@@ -1,0 +1,229 @@
+[p] 
+[p] Registration to Plane: A Cookbook
+[SDT]
+  [TOCHeading] Contents
+  [TOC1] 1.	Review	2
+  [TOC1] 1.1.	Planes not at J6 in Robot Tool Coordinates	2
+  [TOC1] 1.2.	A Plane in the Sensor Coordinate System	3
+  [TOC1] 2.	Elaboration	4
+  [TOC1] 2.1.	Interpreting the Results	6
+  [TOC1] 2.2.	Setup the Solution	7
+  [TOC1] 3.	A Numerically Superior Method	11
+  [TOC1] 4.	Aside: Plane-Plane Transformations	14
+  [TOC1] 5.	Revisions	16
+  [TOC1] 6.	Table of Equations	17
+  [p] 
+[p] 
+
+[Heading1 L0#1] Review
+[p] We take the general formula satisfied by the points  $p_{i}$  on a plane  $v$  to be
+[p]  $v⋅p_{i}=(a ; b ; c ; d)^{t}⋅(x_{i} ; y_{i} ; z_{i} ; 1)=ax_{i}+by_{i}+cz_{i}+d=0$ 
+[Caption] Equation  – The Plane Equation
+[p] The equation satisfied by a thin plane  $o$  affixed at J6, parallel to J6, expressed in the robot’s tool coordinate system (denoted by superscript ‘r’) is
+[p]  $o⋅p_{i}^{r}=(0 ; 0 ; 1 ; 0)^{t}(x^{r} ; y^{r} ; z^{r} ; 1)=0⟺z^{r}=0$ 
+[Caption] Equation  – Plane Equation for the Robot’s J6 Face
+[Heading1 L1#1] Planes not at J6 in Robot Tool Coordinates
+[p] Equation 2 is written under the assumption that the target plane is parallel to J6, so its equation, in the robot’s tool coordinate system, is simply  $z^{r}=0$ . This simplifying assumption may not be true, so we will present Equation 2 for the general case.
+[p] If the plane is parallel to J6 and has some non-zero thickness  $σ$  then
+ $o⋅p_{i}^{r}=(0 ; 0 ; 1 ; -σ)^{t}(x^{r} ; y^{r} ; z^{r} ; 1)=0⟺z^{r}=σ$ 
+[Caption] Equation  – Plane Equation for a plane offset to the J6 Face
+[p] If the plane  $o$  is affixed at an arbitrary orientation and position with respect to robot tool coordinates, we must write
+[p]  $o⋅p_{i}^{r}=(a_{o} ; b_{o} ; c_{o} ; d_{o})^{t}(x^{r} ; y^{r} ; z^{r} ; 1)=a_{o}x^{r}+b_{o}y^{r}+c_{o}z^{r}+d_{o}=0$ 
+[Caption] Equation  - Arbitrary Plane in Robot Tool Coordinates
+[Heading1 L1#1] A Plane in the Sensor Coordinate System
+[p] In the sensor coordinate system ‘ $s$ ’ the equation of a plane is
+[p]  $p^{s}⋅p_{i}^{s}=(a ; b ; c ; d)^{t}⋅(x_{i}^{s} ; y_{i}^{s} ; z_{i}^{s} ; 1)⟺ax_{i}^{s}+by_{i}^{s}+cz_{i}^{s}+d=0$ 
+[Caption] Equation  – Plane Equation in Sensor Coordinates
+[p] Where the superscript ‘ $s$ ’ denotes coordinates measured in the sensor coordinate system.
+[p] 
+
+[Heading1 L0#1] Elaboration
+[p] We seek the rigid transformation  $X$  which, when applied to a point in sensor coordinates, gives a point in robot (world) coordinates:
+[p]  $X⋅p^{s}=p^{w}$ 
+[Caption] Equation  – Transform from Sensor to World Coordinates
+[p] Suppose a sensor views a plane  $o$  affixed to J6, which is moved to a series of poses  ${T_{1},…,T_{n}}$ . The index  $k$  identifies members of the series of poses: e.g.  $T_{k}: 1≤k≤n$  is a pose in this series.
+[p] Suppose, further, the sensor measures the plane coordinates of  $o$  in its own coordinate system to obtain a series of planes  ${p_{1}^{s},…,p_{n}^{s}}$  expressed in the sensor coordinate system ‘s’. As above  $p_{k}^{s}:1≤k≤n$  is a plane in this series.
+[p] As  $k$  varies, we can write the following series of equations to relate the plane coordinates 
+ $(X^{-1})^{t}⋅p_{k}^{s}=(T_{k}^{-1})^{t}⋅o$ 
+[Caption] Equation  – Transform from Sensor Planes to Target Planes in World Coordinates
+[p] Equation 7 is the equation we wish to solve for the unknown  $X$ .
+[p] Write  $ξ_{ij}$  for the elements of  $(X^{-1})^{t}=Ξ$ . 
+[p] Write  $τ_{ij}$  for the elements of  $(T_{k}^{-1})^{t}=Τ$ . 
+[p] Write  $(a_{k} ; b_{k} ; c_{k} ; d_{k})=p_{k}^{s}$  for the elements of  $p_{k}^{s}$ .
+For the  $k^{th}$  incidence of the series write:
+[p]  $(X^{-1})^{t}⋅p_{k}^{s}=(T_{k}^{-1})^{t}⋅oΞ⋅p_{k}^{s}=Τ_{k}⋅o{ξ_{11}a_{k}+ξ_{12}b_{k}+ξ_{13}c_{k}+ξ_{14}d_{k}=τ_{11}_{k}a_{o}+τ_{12}_{k}b_{o}+τ_{13}_{k}c_{o}+τ_{14}_{k}d_{o} ; ξ_{21}a_{k}+ξ_{22}b_{k}+ξ_{23}c_{k}+ξ_{24}d_{k}=τ_{21}_{k}a_{o}+τ_{22}_{k}b_{o}+τ_{23}_{k}c_{o}+τ_{24}_{k}d_{o} ; ξ_{31}a_{k}+ξ_{32}b_{k}+ξ_{33}c_{k}+ξ_{34}d_{k}=τ_{31}_{k}a_{o}+τ_{32}_{k}b_{o}+τ_{33}_{k}c_{o}+τ_{34}_{k}d_{o} ; ξ_{41}a_{k}+ξ_{42}b_{k}+ξ_{43}c_{k}+ξ_{44}d_{k}=τ_{41}_{k}a_{o}+τ_{42}_{k}b_{o}+τ_{43}_{k}c_{o}+τ_{44}_{k}d_{o}$ 
+[Caption] Equation  – Normal Equations for Arbitrary Plane
+[p] If the plane  $o$  is thin and flush with the face of J6 we have the simple case of  $o=([0 \\ 0 \\ 1] ; 0)$ . So Equation 8 simplifies to Equation 9 $$  ${ξ_{11}a_{k}+ξ_{12}b_{k}+ξ_{13}c_{k}+ξ_{14}d_{k}=τ_{13}_{k} ; ξ_{21}a_{k}+ξ_{22}b_{k}+ξ_{23}c_{k}+ξ_{24}d_{k}=τ_{23}_{k} ; ξ_{31}a_{k}+ξ_{32}b_{k}+ξ_{33}c_{k}+ξ_{34}d_{k}=τ_{33}_{k} ; ξ_{41}a_{k}+ξ_{42}b_{k}+ξ_{43}c_{k}+ξ_{44}d_{k}=τ_{43}_{k}$ 
+[Caption] Equation  - Normal Equations for Plane at J6
+[p] Since we know that  $Ξ$  is the transpose of a rigid transformation, we know that  $ξ_{14}=ξ_{24}=ξ_{34}=0$  and  $ξ_{44}=1$ . Likewise,  $T_{k}$  is the transpose of a rigid transformation, so we know that  $τ_{14}_{k}=τ_{14}_{k}=τ_{14}_{k}=0$  and  $τ_{44}_{k}=1$ . So, for the  $k^{th}$  incidence of the measurement series we may write the set of simultaneous linear equations
+[p]  $in the general case: {ξ_{11}a_{k}+ξ_{12}b_{k}+ξ_{13}c_{k}=τ_{11}_{k}a_{o}+τ_{12}_{k}b_{o}+τ_{13}_{k}c_{o} ; ξ_{21}a_{k}+ξ_{22}b_{k}+ξ_{23}c_{k}=τ_{21}_{k}a_{o}+τ_{22}_{k}b_{o}+τ_{23}_{k}c_{o} ; ξ_{31}a_{k}+ξ_{32}b_{k}+ξ_{33}c_{k}=τ_{31}_{k}a_{o}+τ_{32}_{k}b_{o}+τ_{33}_{k}c_{o} ; ξ_{41}a_{k}+ξ_{42}b_{k}+ξ_{43}c_{k}+d_{k}=τ_{41}_{k}a_{o}+τ_{42}_{k}b_{o}+τ_{43}_{k}c_{o}+d_{o}$ 
+[p]  $in simple case where the plane is J6: {ξ_{11}a_{k}+ξ_{12}b_{k}+ξ_{13}c_{k}=τ_{13}_{k} ; ξ_{21}a_{k}+ξ_{22}b_{k}+ξ_{23}c_{k}=τ_{23}_{k} ; ξ_{31}a_{k}+ξ_{32}b_{k}+ξ_{33}c_{k}=τ_{33}_{k} ; ξ_{41}a_{k}+ξ_{42}b_{k}+ξ_{43}c_{k}+d_{k}=τ_{43}_{k}$ 
+[Caption] Equation  – Simplified Normal Equations for Plane Transform
+[p] There are  $k$  such sets, supplying  $4×k$  equations in the 12 unknown variables  ${ξ_{11},ξ_{12},ξ_{13},ξ_{21},ξ_{22},ξ_{23},ξ_{31},ξ_{32},ξ_{33},ξ_{41},ξ_{42},ξ_{43}}$ .
+[p] These sets of equations may be prepared for solving in the usual way
+[p]  ${a_{k}ξ_{11}+b_{k}ξ_{12}+c_{k}ξ_{13}+0ξ_{21}+0ξ_{22}+0ξ_{23}+0ξ_{31}+0ξ_{32}+0ξ_{33}+0ξ_{41}+0ξ_{42}+0ξ_{43}=τ_{11}_{k}a_{o}+τ_{12}_{k}b_{o}+τ_{13}_{k}c_{o} ; 0ξ_{11}+0ξ_{12}+0ξ_{13}+a_{k}ξ_{21}+b_{k}ξ_{22}+c_{k}ξ_{23}+0ξ_{31}+0ξ_{32}+0ξ_{33}+0ξ_{41}+0ξ_{42}+0ξ_{43}=τ_{21}_{k}a_{o}+τ_{22}_{k}b_{o}+τ_{23}_{k}c_{o} ; 0ξ_{11}+0ξ_{12}+0ξ_{13}+0ξ_{21}+0ξ_{22}+0ξ_{23}+a_{k}ξ_{31}+b_{k}ξ_{32}+c_{k}ξ_{33}+0ξ_{41}+0ξ_{42}+0ξ_{43}=τ_{31}_{k}a_{o}+τ_{32}_{k}b_{o}+τ_{33}_{k}c_{o} ; 0ξ_{11}+0ξ_{12}+0ξ_{13}+0ξ_{21}+0ξ_{22}+0ξ_{23}+0ξ_{31}+0ξ_{32}+0ξ_{33}+a_{k}ξ_{41}+b_{k}ξ_{42}+c_{k}ξ_{43}=τ_{41}_{k}a_{o}+τ_{42}_{k}b_{o}+τ_{43}_{k}c_{o}+d_{o}-d_{k}$ 
+[p]  $or, in the simple case: {a_{k}ξ_{11}+b_{k}ξ_{12}+c_{k}ξ_{13}+0ξ_{21}+0ξ_{22}+0ξ_{23}+0ξ_{31}+0ξ_{32}+0ξ_{33}+0ξ_{41}+0ξ_{42}+0ξ_{43}=τ_{13}_{k} ; 0ξ_{11}+0ξ_{12}+0ξ_{13}+a_{k}ξ_{21}+b_{k}ξ_{22}+c_{k}ξ_{23}+0ξ_{31}+0ξ_{32}+0ξ_{33}+0ξ_{41}+0ξ_{42}+0ξ_{43}=τ_{23}_{k} ; 0ξ_{11}+0ξ_{12}+0ξ_{13}+0ξ_{21}+0ξ_{22}+0ξ_{23}+a_{k}ξ_{31}+b_{k}ξ_{32}+c_{k}ξ_{33}+0ξ_{41}+0ξ_{42}+0ξ_{43}=τ_{33}_{k} ; 0ξ_{11}+0ξ_{12}+0ξ_{13}+0ξ_{21}+0ξ_{22}+0ξ_{23}+0ξ_{31}+0ξ_{32}+0ξ_{33}+a_{k}ξ_{41}+b_{k}ξ_{42}+c_{k}ξ_{43}=τ_{43}_{k}-d_{k}$ 
+[Caption] Equation  – Complete Normal Equations for Plane Transform
+[p] 
+[Heading1 L1#1] Interpreting the Results
+[p] The resulting matrix  $Ξ$  is related to the desired coordinate transform via
+[p]  $(X^{-1})^{t}=ΞX=(Ξ^{t})^{-1}$ 
+[Caption] Equation  – Relationship between Plane Transform and Coordinate Transform
+[p] 
+
+[Heading1 L1#1] Setup the Solution
+[p] Solve the linear least square problem for the unknown  $ξ$ 
+[p]  $P⋅ξ=τ$ 
+[Caption] Equation  – Linear Least Squares Problem
+[p] Where (for N = # of plane measurements):
+[p]  $[P]=(4×N)×12                    a 2D Matrix[ξ]=12×1                                 a Column Vector[τ]=(4×N)×1                       a Column Vector$ 
+[Caption] Equation  – Dimensions of Matrices
+[p] We want the elements of the matrix  $Ξ$ 
+[p]  $Ξ=([ξ_{11} & ⋯ & ξ_{14} \\ ⋮ & ⋱ & ⋮ \\ ξ_{41} & ⋯ & ξ_{44}])$ 
+[Caption] Equation  – The 4x4 Plane Transform Matrix
+[p] From above we know that  $Ξ$  is the transpose of a rigid transformation, so  $ξ_{14}=ξ_{24}=ξ_{34}=0$  and  $ξ_{44}=1$ . So we are solving for the 12 unknown elements in  $Ξ$ 
+[p]  $Ξ=([ξ_{11} & ⋯ & 0 \\ ⋮ & ⋱ & ⋮ \\ ξ_{41} & ⋯ & 1])$ 
+[Caption] Equation  – The 4x4 Plane Transform Matrix is a Transpose of a Rigid Transform
+[p] The  $12×1$  column vector containing the unknowns in  $Ξ$  is  $ξ:$ 
+[p]  $ξ=(ξ_{11} ; ξ_{12} ; ξ_{13} ; ξ_{21} ; ξ_{22} ; ξ_{23} ; ξ_{31} ; ξ_{32} ; ξ_{33} ; ξ_{41} ; ξ_{42} ; ξ_{43})$ 
+[Caption] Equation  – Column Vector of Unknowns
+[p] The  $4×N$  column vector  $τ$ , on the right hand side, in the general case, is
+[p]  $τ_{general}=(τ_{11}_{1}a_{o}+τ_{12}_{1}b_{o}+τ_{13}_{1}c_{o} ; τ_{21}_{1}a_{o}+τ_{22}_{1}b_{o}+τ_{23}_{1}c_{o} ; τ_{31}_{1}a_{o}+τ_{32}_{1}b_{o}+τ_{33}_{1}c_{o} ; τ_{41}_{1}a_{o}+τ_{42}_{1}b_{o}+τ_{43}_{1}c_{o}+d_{o}-d_{1} ; ⋮ ; τ_{11}_{N}a_{o}+τ_{12}_{N}b_{o}+τ_{13}_{N}c_{o} ; τ_{21}_{N}a_{o}+τ_{22}_{N}b_{o}+τ_{23}_{N}c_{o} ; τ_{31}_{N}a_{o}+τ_{32}_{N}b_{o}+τ_{33}_{N}c_{o} ; τ_{41}_{N}a_{o}+τ_{42}_{N}b_{o}+τ_{43}_{N}c_{o}+d_{o}-d_{N})$ 
+[p]  $or, in the simple case:   τ_{simple}=(τ_{13}_{1} ; τ_{23}_{1} ; τ_{33}_{1} ; τ_{43}_{1}-d_{1} ; ⋮ ; τ_{13}_{N} ; τ_{23}_{N} ; τ_{33}_{N} ; τ_{43}_{N}-d_{N})$ 
+[Caption] Equation  – Column Vector of Planes in World Coordinates
+[p] The  $(4×N)×12$  matrix  $P$  is derived from the coefficients of the left hand side from above: 
+[p]  ${a_{k}ξ_{11}+b_{k}ξ_{12}+c_{k}ξ_{13}+0ξ_{21}+0ξ_{22}+0ξ_{23}+0ξ_{31}+0ξ_{32}+0ξ_{33}+0ξ_{41}+0ξ_{42}+0ξ_{43} ; 0ξ_{11}+0ξ_{12}+0ξ_{13}+a_{k}ξ_{21}+b_{k}ξ_{22}+c_{k}ξ_{23}+0ξ_{31}+0ξ_{32}+0ξ_{33}+0ξ_{41}+0ξ_{42}+0ξ_{43} ; 0ξ_{11}+0ξ_{12}+0ξ_{13}+0ξ_{21}+0ξ_{22}+0ξ_{23}+a_{k}ξ_{31}+b_{k}ξ_{32}+c_{k}ξ_{33}+0ξ_{41}+0ξ_{42}+0ξ_{43} ; 0ξ_{11}+0ξ_{12}+0ξ_{13}+0ξ_{21}+0ξ_{22}+0ξ_{23}+0ξ_{31}+0ξ_{32}+0ξ_{33}+a_{k}ξ_{41}+b_{k}ξ_{42}+c_{k}ξ_{43}$ 
+[Caption] Equation  – LHS of Normal Equations
+[p] That is:
+[p]  $P=([a_{1} & b_{1} & c_{1} & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 \\ 0 & 0 & 0 & a_{1} & b_{1} & c_{1} & 0 & 0 & 0 & 0 & 0 & 0 \\ 0 & 0 & 0 & 0 & 0 & 0 & a_{1} & b_{1} & c_{1} & 0 & 0 & 0 \\ 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & a_{1} & b_{1} & c_{1} \\ ⋮ & ⋮ & ⋮ & ⋮ & ⋮ & ⋮ & ⋮ & ⋮ & ⋮ & ⋮ & ⋮ & ⋮ \\ a_{N} & b_{N} & c_{N} & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 \\ 0 & 0 & 0 & a_{N} & b_{N} & c_{N} & 0 & 0 & 0 & 0 & 0 & 0 \\ 0 & 0 & 0 & 0 & 0 & 0 & a_{N} & b_{N} & c_{N} & 0 & 0 & 0 \\ 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & a_{N} & b_{N} & c_{N}])$ 
+[Caption] Equation  – Coefficient Matrix
+[p] 
+Plugging in to exhibit the detailed form of the set of normal equations to be solved in either the general case or the simplified case (with the target plane at J6):
+[p]  $P⋅ξ=τ([a_{1} & b_{1} & c_{1} & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 \\ 0 & 0 & 0 & a_{1} & b_{1} & c_{1} & 0 & 0 & 0 & 0 & 0 & 0 \\ 0 & 0 & 0 & 0 & 0 & 0 & a_{1} & b_{1} & c_{1} & 0 & 0 & 0 \\ 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & a_{1} & b_{1} & c_{1} \\ ⋮ & ⋮ & ⋮ & ⋮ & ⋮ & ⋮ & ⋮ & ⋮ & ⋮ & ⋮ & ⋮ & ⋮ \\ a_{N} & b_{N} & c_{N} & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 \\ 0 & 0 & 0 & a_{N} & b_{N} & c_{N} & 0 & 0 & 0 & 0 & 0 & 0 \\ 0 & 0 & 0 & 0 & 0 & 0 & a_{N} & b_{N} & c_{N} & 0 & 0 & 0 \\ 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & a_{N} & b_{N} & c_{N}])(ξ_{11} ; ξ_{12} ; ξ_{13} ; ξ_{21} ; ξ_{22} ; ξ_{23} ; ξ_{31} ; ξ_{32} ; ξ_{33} ; ξ_{41} ; ξ_{42} ; ξ_{43})=τ_{general}([a_{1} & b_{1} & c_{1} & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 \\ 0 & 0 & 0 & a_{1} & b_{1} & c_{1} & 0 & 0 & 0 & 0 & 0 & 0 \\ 0 & 0 & 0 & 0 & 0 & 0 & a_{1} & b_{1} & c_{1} & 0 & 0 & 0 \\ 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & a_{1} & b_{1} & c_{1} \\ ⋮ & ⋮ & ⋮ & ⋮ & ⋮ & ⋮ & ⋮ & ⋮ & ⋮ & ⋮ & ⋮ & ⋮ \\ a_{N} & b_{N} & c_{N} & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 \\ 0 & 0 & 0 & a_{N} & b_{N} & c_{N} & 0 & 0 & 0 & 0 & 0 & 0 \\ 0 & 0 & 0 & 0 & 0 & 0 & a_{N} & b_{N} & c_{N} & 0 & 0 & 0 \\ 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & a_{N} & b_{N} & c_{N}])(ξ_{11} ; ξ_{12} ; ξ_{13} ; ξ_{21} ; ξ_{22} ; ξ_{23} ; ξ_{31} ; ξ_{32} ; ξ_{33} ; ξ_{41} ; ξ_{42} ; ξ_{43})=τ_{simple}$ 
+[Caption] Equation  – Full Normal Equations to Solve
+[p] The unknown  $ξ$  can be computed via the Moore-Penrose pseudo-inverse  $P^{*}=(P^{t}P)^{-1}P^{t}$  as follows:
+[p]  $P⋅ξ=τP^{*}P⋅ξ=P^{*}τξ=P^{*}τ$ 
+[Caption] Equation  – The (Left) Pseudo-Inverse
+[p] Suppose, for concreteness, N=17. Then  $4×17=68$ .
+[p]  We can verify the dimensions of the matrices and results by looking at the dimensions
+[p]  $[P^{*}]=[(P^{t}P)^{-1}P^{t}]=[(12×68)×(68×12)]^{-1}[12×68][P^{*}]=[12×12][12×68]=[12×68][ξ]=[P^{*}τ]=[12×68][68×1]=[12×1]$ 
+[Caption] Equation  – Dimensions of Normal Equations
+[p] The procedure is this:
+[ListParagraph L0#2] Create the matrix of normal equations  $P⋅ξ=τ$ 
+[ListParagraph L0#2] Solve for  $ξ$ .
+[ListParagraph L0#2] From the elements of  $ξ$  create the matrix  $Ξ$ .
+[ListParagraph L0#2] Use  $Ξ$  to find  $X$ , where  $X=(Ξ^{t})^{-1}$ .
+[ListParagraph L0#2]  $X$  is the transform from sensor to world coordinates we are seeking.
+[Caption] Table  – Solution Method using Normal Equations
+[p] 
+
+[Heading1 L0#1] A Numerically Superior Method
+[p] The method for solving for  $Ξ$  and  $X$  in Section 2.2 above does not attempt to enforce the requirement that the rotation submatrix within  $Ξ$  should be orthogonal and properly scaled. If  $Ξ$  can be computed from the least-squares solution to a series of linear equations of the form  $A⋅X=B$  where  $X$  and  $B$  are augmented matrices of ‘N’ homogeneous points and  $A$  is a rigid transform then we can use the mechanisms in the RigidTransform3D class to find  $Ξ$  – while ensuring that the rotation submatrix of  $Ξ$  is properly orthogonal and scaled.
+[p] To keep the notation compact, with reference to the RHS of Equation 8, we define
+[p]  $(t_{1} ; t_{2} ; t_{3} ; t_{4})_{k}=(τ_{11}_{k}a_{o}+τ_{12}_{k}b_{o}+τ_{13}_{k}c_{o} ; τ_{21}_{k}a_{o}+τ_{22}_{k}b_{o}+τ_{23}_{k}c_{o} ; τ_{31}_{k}a_{o}+τ_{32}_{k}b_{o}+τ_{33}_{k}c_{o} ; τ_{41}_{k}a_{o}+τ_{42}_{k}b_{o}+τ_{43}_{k}c_{o}+d_{o})$ 
+[Caption] Equation  - Short Form for RHS Constants,indexed by’k’
+[p] Equation 24 is expressed with  $τ_{general}$ . It is straightforward to rewrite Equation 24 for the simplified case in which  $a_{o}=b_{o}=d_{o}=0$  and  $c_{o}=1$  at J6, as described above.
+[p] Also, we write:
+[p]  $p_{k}^{s}=(p_{k}^{s}_{1} ; p_{k}^{s}_{2} ; p_{k}^{s}_{3} ; p_{k}^{s}_{4})=(p_{1}^{s} ; p_{2}^{s} ; p_{3}^{s} ; p_{4}^{s})_{k}$ 
+[Caption] Equation  - Short Form for Sensor Planes, indexed by 'k'
+[p] Write 
+[p]  $Ξ^{-t}=X=([R & s \\ \acc(̅){0}^{t} & 1])X^{t}=([R^{-1} & \acc(̅){0} \\ s^{t} & 1])$ 
+[p]  $(T_{k}^{-1})^{t}⋅o=(X^{-1})^{t}⋅p_{k}^{s}=(X^{t})^{-1}⋅p_{k}^{s}X^{t}⋅(T_{k}^{-t}⋅o)=([R^{-1} & \acc(̅){0} \\ s^{t} & 1])⋅(τ_{11}_{k}a_{o}+τ_{12}_{k}b_{o}+τ_{13}_{k}c_{o} ; τ_{21}_{k}a_{o}+τ_{22}_{k}b_{o}+τ_{23}_{k}c_{o} ; τ_{31}_{k}a_{o}+τ_{32}_{k}b_{o}+τ_{33}_{k}c_{o} ; τ_{41}_{k}a_{o}+τ_{42}_{k}b_{o}+τ_{43}_{k}c_{o}+d_{o})=([R^{-1} & \acc(̅){0} \\ s^{t} & 1])(t_{1} ; t_{2} ; t_{3} ; t_{4})_{k}=p_{k}^{s}(R^{-1}⋅(t_{1} ; t_{2} ; t_{3})_{k} ; (t_{1} ; t_{2} ; t_{3} ; t_{4})_{k}⋅(s_{x} ; s_{y} ; s_{z} ; 1))=p_{k}^{s}=(p_{1}^{s} ; p_{2}^{s} ; p_{3}^{s} ; p_{4}^{s})_{k}(R^{-1}⋅(t_{1} ; t_{2} ; t_{3})_{k}-(p_{1}^{s} ; p_{2}^{s} ; p_{3}^{s})_{k} ; (t_{1} ; t_{2} ; t_{3} ; t_{4}-p_{4}^{s})_{k}∘(s_{x} ; s_{y} ; s_{z} ; 1))=(0 ; 0 ; 0 ; 0)$ 
+[Caption] Equation  – Rearranging for an Alternative Solution Method
+[p]  $s$  is the least-squares solution to the set of equations with coefficients 
+[p]  $(τ_{11}_{k}a_{o}+τ_{12}_{k}b_{o}+τ_{13}_{k}c_{o} ; τ_{21}_{k}a_{o}+τ_{22}_{k}b_{o}+τ_{23}_{k}c_{o} ; τ_{31}_{k}a_{o}+τ_{32}_{k}b_{o}+τ_{33}_{k}c_{o} ; τ_{41}_{k}a_{o}+τ_{42}_{k}b_{o}+τ_{43}_{k}c_{o}+d_{o}-p_{k}^{s}_{4})∘(s_{x} ; s_{y} ; s_{z} ; 1)=(t_{1} ; t_{2} ; t_{3} ; t_{4}-p_{4}^{s})_{k}∘(s_{x} ; s_{y} ; s_{z} ; 1)=0$ 
+[Caption] Equation  – Equations for the Sensor Position
+[p] From Equation 27 we now have the set of N equations to set to zero and solve for  ${s_{x},s_{y},s_{z}}$ 
+[p]  ${t_{1}s_{x}+t_{2}s_{y}+t_{3}s_{y}+t_{4}-p_{4}^{s}=0_{  EQ: 1} ; ⋮ ; t_{1}s_{x}+t_{2}s_{y}+t_{3}s_{y}+t_{4}-p_{4}^{s}=0_{  EQ: N}}$ 
+[Caption] Equation  - Solve for s
+[p]  $R^{-1}$  is the rotation matrix determined by the set of equations below
+[p]  $R^{-1}⋅(t_{1} ; t_{2} ; t_{3})_{k}-(p_{1}^{s} ; p_{2}^{s} ; p_{3}^{s})_{k}=0$ 
+[Caption] Equation  – Equations for the Inverse Rotation Matrix
+[p]  $R^{-1}$  may be computed by SVD in the usual way from the augmented matrices.
+[p]  $R^{-1}⋅(t_{1} ; t_{2} ; t_{3}_{  1}|⋯  |t_{1} ; t_{2} ; t_{3}_{  N})-(p_{1}^{s} ; p_{2}^{s} ; p_{3}^{s}_{   1}|⋯  |p_{1}^{s} ; p_{2}^{s} ; p_{3}^{s}_{   N})=0$ 
+[Caption] Equation  - Use SVD to Find R^-1
+[p] 
+[p] So, now we have the solution for  $X^{t}$ 
+[p]  $X^{t}=([R^{-1} & \acc(̅){0} \\ s^{t} & 1])$ 
+[Caption] Equation  – Exhibiting the Transposed Solution
+[p] Since  $X=X^{t}^{t}$  we have 
+ $X=X^{t}^{t}=([(R^{-1})^{t} & s \\ \acc(̅){0}^{t} & 1])=([R & s \\ \acc(̅){0}^{t} & 1])∎$ 
+[Caption] Equation  – The Registration Transform via the Alternative Method
+[p] 
+[p] 
+
+[Heading1 L0#1] Aside: Plane-Plane Transformations
+[p] Suppose we have a plane with coefficients expressed in our original coordinate system:  $p=(a ; b ; c ; d)$ . 
+[p] The set of points  $p_{i}=(x_{i} ; y_{i} ; z_{i} ; 1)$  lying on the plane all satisfy the equation:
+[p]  $p^{t}⋅p_{i}=([a & b & c & d])⋅(x_{i} ; y_{i} ; z_{i} ; 1)=ax_{i}+by_{i}+cz_{i}+d=0$ 
+[Caption] Equation  – The Plane Equation
+[p] Suppose we have a rigid transformation  $T$  from the original coordinate system into a new coordinate system. We know points are transformed into the new coordinate system by applying the rigid transformation
+ $p_{i}^{'}=Tp_{i}$ 
+[Caption] Equation  – Rigid Transformation
+[p] How do we transform a plane into the new coordinate system so that the new plane  $p'$  satisfies the equation  $p^{'}^{t}⋅p_{i}^{'}=0$ ?
+[p] Here’s the trick
+[p]  $p^{t}⋅p_{i}=0                         [from above]p^{t}(T^{-1}T)p_{i}=0              [inserting an identity](p^{t}T^{-1})⋅(Tp_{i})=0       [rearranging]((T^{-1})^{t}p)^{t}⋅(Tp_{i})=0  [property of transpose]p^{'}^{t}⋅p_{i}^{'}=0                        [now in the primed coordinate system]$ 
+[Caption] Equation  – Showing How Planes are Transformed
+[p] Thus, comparing  $p^{t}$  with  $((T^{-1})^{t}p)^{t}$ , we see that the coefficients of the new plane in the new coordinate system are  $(T^{-1})^{t}p=p'$ . 
+[p] That is, the old plane  $p$  becomes a new plane  $p'$  by transforming its coefficients by  $(T^{-1})^{t}$ .
+[p]  $p^{'}=(T^{-1})^{t}p∎$ 
+[Caption] Equation  – Transform Planes via the Inverse Transpose
+[p] 
+[p] 
+[p] 
+
+[Heading1 L0#1] Revisions
+[p] 
+[TABLE]
+ | Author | Date | Notes
+ | G Neil Haven | 14 April 2025 | Original version
+ | G Neil Haven | 15 April 2025 | First Release
+ | G Neil Haven | 17 April 2025 | Added Notes on Plane-Plane Transformations
+ | G Neil Haven | Sunday, April 20, 2025 | Notes on Improved Numerical Method
+ | G Neil Haven | Monday, April 21, 2025 | Added Equation Labels
+ | G Neil Haven | Monday, June 16, 2025 | Added math for general plane in Robot Tool Coordinates
+[/TABLE]
+[p] 
+[p] 
+[p] 
+[p] 
+
+[Heading1 L0#1] Table of Equations
+[p] 
+[TableofFigures] Equation 1 – The Plane Equation	2
+[TableofFigures] Equation 2 – Plane Equation for the Robot’s J6 Face	2
+[TableofFigures] Equation 3 – Plane Equation for a plane offset to the J6 Face	2
+[TableofFigures] Equation 4 - Arbitrary Plane in Robot Tool Coordinates	2
+[TableofFigures] Equation 5 – Plane Equation in Sensor Coordinates	3
+[TableofFigures] Equation 6 – Transform from Sensor to World Coordinates	4
+[TableofFigures] Equation 7 – Transform from Sensor Planes to Target Planes in World Coordinates	4
+[TableofFigures] Equation 8 – Normal Equations for Arbitrary Plane	4
+[TableofFigures] Equation 9 - Normal Equations for Plane at J6	5
+[TableofFigures] Equation 10 – Simplified Normal Equations for Plane Transform	5
+[TableofFigures] Equation 11 – Complete Normal Equations for Plane Transform	5
+[TableofFigures] Equation 12 – Relationship between Plane Transform and Coordinate Transform	6
+[TableofFigures] Equation 13 – Linear Least Squares Problem	7
+[TableofFigures] Equation 14 – Dimensions of Matrices	7
+[TableofFigures] Equation 15 – The 4x4 Plane Transform Matrix	7
+[TableofFigures] Equation 16 – The 4x4 Plane Transform Matrix is a Transpose of a Rigid Transform	7
+[TableofFigures] Equation 17 – Column Vector of Unknowns	7
+[TableofFigures] Equation 18 – Column Vector of Planes in World Coordinates	8
+[TableofFigures] Equation 19 – LHS of Normal Equations	8
+[TableofFigures] Equation 20 – Coefficient Matrix	8
+[TableofFigures] Equation 21 – Full Normal Equations to Solve	9
+[TableofFigures] Equation 22 – The (Left) Pseudo-Inverse	9
+[TableofFigures] Equation 23 – Dimensions of Normal Equations	10
+[TableofFigures] Equation 24 - Short Form for RHS Constants,indexed by’k’	11
+[TableofFigures] Equation 25 - Short Form for Sensor Planes, indexed by 'k'	11
+[TableofFigures] Equation 26 – Rearranging for an Alternative Solution Method	12
+[TableofFigures] Equation 27 – Equations for the Sensor Position	12
+[TableofFigures] Equation 28 - Solve for s	12
+[TableofFigures] Equation 29 – Equations for the Inverse Rotation Matrix	12
+[TableofFigures] Equation 30 - Use SVD to Find R^-1	13
+[TableofFigures] Equation 31 – Exhibiting the Transposed Solution	13
+[TableofFigures] Equation 32 – The Registration Transform via the Alternative Method	13
+[TableofFigures] Equation 33 – The Plane Equation	14
+[TableofFigures] Equation 34 – Rigid Transformation	14
+[TableofFigures] Equation 35 – Showing How Planes are Transformed	14
+[TableofFigures] Equation 36 – Transform Planes via the Inverse Transpose	15
+[p] 

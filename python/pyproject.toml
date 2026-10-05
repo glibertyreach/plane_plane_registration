@@ -1,0 +1,23 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "planereg"
+version = "0.1.0"
+description = "Gathering and analysis of the sample set that tests sensor-to-robot registration from plane-plane correspondences"
+requires-python = ">=3.10"
+# sphcal is the sibling repository depth_calibration_from_spherical_target; it supplies the
+# verified .mc reader, the pose-log / manifest tools and the synthetic board renderer.
+# Install it first:  pip install -e /path/to/depth_calibration_from_spherical_target
+dependencies = ["numpy>=1.26", "scipy>=1.11", "sphcal>=0.1.0"]
+
+[project.optional-dependencies]
+figures = ["matplotlib>=3.8"]
+test = ["pytest>=8.0"]
+
+[tool.setuptools.packages.find]
+include = ["planereg*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

@@ -1,0 +1,68 @@
+==============================================================================
+Check 1: Section 4, planes transform by the inverse transpose (Eq. 36)
+[PASS] 1a Eq.36: transformed points satisfy transformed plane: max residual 1.42e-14
+[PASS] 1b closed form (T^-1)^t = [[R,0],[-t^T R,1]]
+[PASS] 1c inverse transpose preserves |normal|
+==============================================================================
+Check 2: structure of Xi = X^{-t} (Eq. 16): top-right 3x1 block zero, xi44 = 1
+[PASS] 2a xi14=xi24=xi34=0 and xi44=1
+[PASS] 2b top-left 3x3 of Xi is R_X itself (not R_X^-1)
+[PASS] 2c bottom row of Xi is -s^T R_X
+==============================================================================
+Check 3 [simple o=(0,0,1,0)]: noise-free recovery by both methods
+[PASS] 3a Eq.7 X^-t p_s = T_k^-t o holds exactly [simple o=(0,0,1,0)]
+[PASS] 3b Section 2.2 linear-12 recovers X [simple o=(0,0,1,0)]: rot err 5.72e-11 deg, trans err 3.02e-09 mm, cond(P) = 3.4
+[PASS] 3c Section 3 (Procrustes + translation LS) recovers X [simple o=(0,0,1,0)]: rot err 1.94e-14 deg, trans err 4.10e-13 mm
+[PASS] 3d 12-unknown LS == four 3-unknown LS with the same N x 3 matrix [simple o=(0,0,1,0)]
+==============================================================================
+Check 3 [general o]: noise-free recovery by both methods
+[PASS] 3a Eq.7 X^-t p_s = T_k^-t o holds exactly [general o]
+[PASS] 3b Section 2.2 linear-12 recovers X [general o]: rot err 1.09e-11 deg, trans err 3.03e-10 mm, cond(P) = 2.7
+[PASS] 3c Section 3 (Procrustes + translation LS) recovers X [general o]: rot err 2.90e-14 deg, trans err 6.82e-13 mm
+[PASS] 3d 12-unknown LS == four 3-unknown LS with the same N x 3 matrix [general o]
+==============================================================================
+Check 4: what the spec leaves unsaid -- homogeneous scale and sign of the sensor planes
+[PASS] 4a un-normalized sensor planes break the linear method: rot err 6.6 deg, trans err 1076.8 mm
+[PASS] 4b un-normalized sensor planes break the Section 3 method: rot err 2.92e-14 deg, trans err 931.3 mm
+[PASS] 4c inconsistent normal signs break the Section 3 method: rot err 180.0 deg, trans err 2597.5 mm
+[PASS] 4d with o's normal facing the sensor, the sensor origin is on the positive side of every world plane: min signed distance 955.1 mm
+[PASS] 4e normalizing to |n|=1, d>0 repairs 4a-4c
+==============================================================================
+Check 5: the printed typo in Eq. 28 (s_y appears twice, s_z is missing)
+[PASS] 5a Eq.28 as printed gives the wrong translation: error 1912.7 mm
+==============================================================================
+Check 6: minimum data and degenerate pose sets
+[PASS] 6a N = 3 poses with independent normals suffice (exact): rot err 2.92e-13 deg, trans err 6.07e-12 mm
+[PASS] 6b N = 2 poses: translation matrix rank 2 (one direction undetermined)
+[PASS] 6c N = 2 non-parallel normals still determine the rotation
+[PASS] 6d translation/spin-only poses (parallel normals): rank 1, unsolvable
+[PASS] 6e ... and the linear method's P is rank deficient (X not recoverable): cond(P) = inf, X recovered: False
+==============================================================================
+Check 7: noise -- Section 2.2 vs Section 3, and centered-Kabsch vs uncentered Procrustes
+   linear12      : rot RMS 0.0993 deg, trans RMS 0.226 mm
+   sec3          : rot RMS 0.0907 deg, trans RMS 0.226 mm
+   sec3_centered : rot RMS 0.1067 deg, trans RMS 0.226 mm
+   last linear-12 solve: |R^T R - I| = 1.02e-02  (the rotation block is not orthogonal)
+[PASS] 7a Section 3 translation error <= linear-12 translation error (RMS)
+[PASS] 7b centered Kabsch on normals is worse than uncentered Procrustes (RMS rot)
+[PASS] 7c linear-12 rotation block is not orthogonal under noise: |R^T R - I| = 1.02e-02
+==============================================================================
+Check 8: translation does not depend on the rotation estimate at all (Eq. 27)
+[PASS] 8a s solves from world normals and offsets only
+==============================================================================
+Check 9: pose-design sensitivity -- translation RMS vs tilt half-range (noisy, Section 3)
+   tilt +/-   2 deg: rot RMS 1.3354 deg, trans RMS 3.500 mm, mean smallest sing. value of [m_k] 0.070
+   tilt +/-   5 deg: rot RMS 0.4884 deg, trans RMS 1.556 mm, mean smallest sing. value of [m_k] 0.162
+   tilt +/-  10 deg: rot RMS 0.2736 deg, trans RMS 0.801 mm, mean smallest sing. value of [m_k] 0.334
+   tilt +/-  20 deg: rot RMS 0.1596 deg, trans RMS 0.406 mm, mean smallest sing. value of [m_k] 0.665
+   tilt +/-  35 deg: rot RMS 0.0936 deg, trans RMS 0.252 mm, mean smallest sing. value of [m_k] 1.105
+   tilt +/-  60 deg: rot RMS 0.0776 deg, trans RMS 0.190 mm, mean smallest sing. value of [m_k] 1.642
+[PASS] 9a translation error falls monotonically with tilt range
+==============================================================================
+Check 10: similarity extension (rotation + translation + uniform scale, no shear)
+[PASS] 10a similarity solve recovers R, s and scale exactly: scale 1.020000000000
+[PASS] 10b the rigid solve on scaled data gets R right but s wrong: trans err 30.4 mm
+[PASS] 10c similarity needs >= 4 poses (N = 3 gives a rank-3 N x 4 system)
+[PASS] 10d N = 4 generic poses suffice
+==============================================================================
+34 passed, 0 failed
