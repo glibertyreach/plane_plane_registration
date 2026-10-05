@@ -29,9 +29,10 @@ Terminology: in this project "registration" means finding the transform between 
 sensor and the robot (the extrinsic parameters); "calibration" means finding the
 sensor's own internal parameters. This procedure is about registration only.
 
-Figures: figure 1 (section 6) shows the two ways of driving to a pose; figure 2
-(section 5) shows an example pose plan; figure 3 (section 4) shows the two numbers
-the software reports for every pose.
+Figures: figure 1 (section 3) shows the board on the flange and its tool frame;
+figure 2 (section 4) shows the two numbers the software reports for every pose;
+figure 3 (section 5) shows an example pose plan; figure 4 (section 6) shows the two
+ways of driving to a pose.
 
 ---
 
@@ -114,22 +115,32 @@ face, with its z axis pointing straight out of the face (along the board's norma
 toward the sensor when the board faces it), x along the long edge, y along the short
 edge. The robot must report the board's pose in this frame. This is the same frame
 as TOOL_BOARD of the stage-1 procedure; if it is already defined on this robot with
-this board and adapter, check it (steps 2 and 3) and reuse it.
+this board and adapter, check it (steps 2 and 3) and reuse it. Figure 1 shows the
+parts, the measurements of steps 2 and 3, and the tool frame.
+
+![mounting](figures/fig_mounting.png)
+
+Figure 1. (a) The flange, the doweled adapter plate and the board in section, with
+the distance D from the flange face to the board's front face, the tool frame at the
+center of the front face (z out of the face toward the sensor, x along the long edge)
+and the dial indicator of the runout check. (b) The front face as the sensor sees it:
+the tool frame axes, the path of the indicator tip while joint 6 turns, the four
+places where D is measured, and the three-point mounting hidden behind the board.
 
 1. Mount the board adapter and the board on the flange with the dowel pins.
-2. Runout check: fix the dial indicator to the table with its tip on the board's
+2. Runout check (figure 1a): fix the dial indicator to the table with its tip on the board's
    front face about 20 mm from an edge. Slowly rotate the flange about its own axis
    (robot joint 6) through 360 degrees. The reading must stay within 0.05 mm. If it
    does not, the board face is not perpendicular to the flange axis: shim the adapter
    and repeat.
 3. Measure the distance from the flange face to the board's front face with a depth
-   gauge or calipers at four places around the board; they should agree within
-   0.05 mm. Record the average as D.
+   gauge or calipers at four places around the board (figure 1b); they should agree
+   within 0.05 mm. Record the average as D.
 4. Measure the board's width and height with calipers and record them. The
    half-sizes go in the pose log (100 and 75 mm for the recommended board).
-5. Define the tool frame in the robot: position (0, 0, D) from the flange,
-   orientation: z along the flange axis pointing out of the board, x along the board's
-   long edge. How to set x: with the robot's "tool orientation by points" function,
+5. Define the tool frame in the robot (figure 1): position (0, 0, D) from the
+   flange, orientation: z along the flange axis pointing out of the board, x along
+   the board's long edge. How to set x: with the robot's "tool orientation by points" function,
    teach a point at the center of the long edge, or enter the rotation about z that
    aligns x with the long edge, after measuring with a square against the adapter.
    An error of a few degrees in x is harmless (the board is symmetric); an error in z
@@ -157,7 +168,7 @@ points scatter about that plane is the *plane residual* (in mm; a clean matte bo
 gives a fraction of a millimeter). From the logged robot pose and the current idea
 of where the sensor is, it also *predicts* where the board plane should be in the
 sensor's view. The difference between the predicted plane and the measured plane is
-reported as two numbers (figure 3): the *normal residual*, the angle between the two
+reported as two numbers (figure 2): the *normal residual*, the angle between the two
 planes in degrees, and the *offset residual*, the distance between them at the
 board's center in millimeters. Once the sensor's position has been solved from all
 the poses together, the two residuals of each pose say how well that pose agrees
@@ -167,7 +178,7 @@ the board was found.
 
 ![residuals](figures/fig_residuals.png)
 
-Figure 3. The two residuals reported for every pose: the angle between the board as
+Figure 2. The two residuals reported for every pose: the angle between the board as
 the robot reports it and the board as the sensor sees it (normal residual), and the
 distance between the two planes at the board's center (offset residual).
 
@@ -240,7 +251,7 @@ python3 -m planereg.capture.plan_poses --sensor-in-base boot.json \
 
 (Use your board's half-sizes in place of 100 75.) It writes three files: the pose
 list `plan/poses.csv` for the robot program, a report `plan/plan_summary.txt`
-(explained below), and a picture `plan/plan.png` (figure 2 shows the picture for the
+(explained below), and a picture `plan/plan.png` (figure 3 shows the picture for the
 default settings). The plan with the default settings is:
 
 The board at three standoffs from the sensor (550, 750 and 950 mm), at a 3 x 3 grid
@@ -332,7 +343,7 @@ calls for a larger set, a second run of 1,000 or more poses is planned with
 
 ![plan](figures/fig_plan_example.png)
 
-Figure 2. The planned board centers for the default settings, in the sensor's frame:
+Figure 3. The planned board centers for the default settings, in the sensor's frame:
 side view (left) and front view (right), with the field of view drawn. One color per
 standoff; held-out poses have an outline.
 
@@ -362,7 +373,7 @@ program, or import it directly if the controller can read CSV.
 ## 6. The two sub-procedures
 
 Every pose is captured twice, in two separate runs over the whole plan, with the
-sensor and the board untouched between them. Figure 1 shows the difference. Read
+sensor and the board untouched between them. Figure 4 shows the difference. Read
 section 7 (the pose log) before writing the robot program: the program has to write
 that file.
 
@@ -377,7 +388,7 @@ the program should wait for a confirmation before moving on.
 
 ![approach](figures/fig_approach.png)
 
-Figure 1. Left: sub-procedure A drives straight onto each target pose. Right:
+Figure 4. Left: sub-procedure A drives straight onto each target pose. Right:
 sub-procedure B drives to the approach pose first, then makes the same final move
 onto the target at every pose. (The approach rotation is exaggerated in the drawing.)
 
