@@ -62,9 +62,36 @@ def example_plan(work: pathlib.Path) -> str:
 
 
 def plan_paragraph(summary: str) -> str:
-    """One paragraph quoting the plan summary verbatim, so the numbers cannot drift."""
-    return ("The plan summary for these settings (reproduced from `plan_summary.txt`, "
-            "and kept in `figures/plan_example_summary.txt`):\n\n```\n" + summary.rstrip() + "\n```")
+    """The example plan summary with an explanation of where it comes from and how to read it.
+    The summary is quoted verbatim from the tool, so its numbers cannot drift from the code."""
+    # The example was run from a temporary file; name the source generically instead.
+    summary = re.sub(r"matrix from \S+sensor\.json", "matrix from boot.json", summary)
+    lead = (
+        "What the plan tool prints. Besides the three files, the tool prints a plain-text\n"
+        "summary to the screen and saves the same text as `plan/plan_summary.txt`. It is not\n"
+        "something you fill in; it is the tool's report on the plan it just made. The block\n"
+        "below is that report for the default settings, a 640 x 480 sensor and a nominal\n"
+        "sensor position (your own run shows the same layout with your numbers). Read it\n"
+        "before handing the plan to the robot programmer:\n\n"
+        "- The table gives, for every standoff and tilt, how many poses were planned, how\n"
+        "  many were dropped because a board corner would fall too near the image edge, how\n"
+        "  many are kept, and how many of those are tagged held out. A few dropped poses are\n"
+        "  normal; if a whole row is dropped, the board is too large for that standoff in\n"
+        "  this sensor's field, and the line after the table says which option to change.\n"
+        "- `normal spread` says how well the tilts cover all directions; the registration\n"
+        "  refuses a set below 0.05. The default plan gives about 0.28. `similarity spread`\n"
+        "  matters only for the optional scale analysis and must exceed 0.01.\n"
+        "- The `predicted ... RMS error` lines are the registration error to expect if the\n"
+        "  sensor's planes are good to 0.2 degrees and 0.2 mm; they are an order of\n"
+        "  magnitude, not a promise. The second quality block repeats the numbers for the\n"
+        "  poses that are not held out, which is the set the engineer fits.\n"
+        "- The last two lines are the size of the job: the number of poses, and the number of\n"
+        "  pose visits and capture files once both sub-procedures (section 6) have been run.\n"
+        "  Check them against the time and disk space available before starting.\n\n"
+        "Send `plan_summary.txt` to the engineer with the other deliverables (section 9). The\n"
+        "example below is also kept as `figures/plan_example_summary.txt`.\n\n"
+    )
+    return lead + "```\n" + summary.rstrip() + "\n```"
 
 
 def main() -> int:

@@ -147,9 +147,10 @@ python3 -m planereg.capture.plan_poses --sensor-in-base boot.json --camera boot/
     --board-half-size-mm 100 75 --out plan/
 ```
 
-(Use your board's half-sizes in place of 100 75.) It writes `plan/poses.csv`,
-`plan/plan_summary.txt` and a picture `plan/plan.png` (figure 2 shows the picture for
-the default settings). The plan with the default settings is:
+(Use your board's half-sizes in place of 100 75.) It writes three files: the pose
+list `plan/poses.csv` for the robot program, a report `plan/plan_summary.txt`
+(explained below), and a picture `plan/plan.png` (figure 2 shows the picture for the
+default settings). The plan with the default settings is:
 
 The board at three standoffs from the sensor (550, 750 and 950 mm), at a 3 x 3 grid
 of lateral positions covering 50 percent of the field at each standoff, facing the
@@ -159,11 +160,35 @@ positions. Tilted boards that would leave the field of view are dropped
 automatically. About 20 percent of the poses are marked holdout in the table;
 capture them like all the others, the software keeps them for checking.
 
-The plan summary for these settings (reproduced from `plan_summary.txt`, and kept in `figures/plan_example_summary.txt`):
+What the plan tool prints. Besides the three files, the tool prints a plain-text
+summary to the screen and saves the same text as `plan/plan_summary.txt`. It is not
+something you fill in; it is the tool's report on the plan it just made. The block
+below is that report for the default settings, a 640 x 480 sensor and a nominal
+sensor position (your own run shows the same layout with your numbers). Read it
+before handing the plan to the robot programmer:
+
+- The table gives, for every standoff and tilt, how many poses were planned, how
+  many were dropped because a board corner would fall too near the image edge, how
+  many are kept, and how many of those are tagged held out. A few dropped poses are
+  normal; if a whole row is dropped, the board is too large for that standoff in
+  this sensor's field, and the line after the table says which option to change.
+- `normal spread` says how well the tilts cover all directions; the registration
+  refuses a set below 0.05. The default plan gives about 0.28. `similarity spread`
+  matters only for the optional scale analysis and must exceed 0.01.
+- The `predicted ... RMS error` lines are the registration error to expect if the
+  sensor's planes are good to 0.2 degrees and 0.2 mm; they are an order of
+  magnitude, not a promise. The second quality block repeats the numbers for the
+  poses that are not held out, which is the set the engineer fits.
+- The last two lines are the size of the job: the number of poses, and the number of
+  pose visits and capture files once both sub-procedures (section 6) have been run.
+  Check them against the time and disk space available before starting.
+
+Send `plan_summary.txt` to the engineer with the other deliverables (section 9). The
+example below is also kept as `figures/plan_example_summary.txt`.
 
 ```
 Registration pose plan
-Sensor-to-base transform: matrix from /tmp/tmpo8ktdcjp/sensor.json
+Sensor-to-base transform: matrix from boot.json
 Camera: 640 x 480 px, half field 24.9 x 19.2 deg
 Board half size: 100 x 75 mm; lateral grid 3 x 3 at fill 0.5; edge margin 10 px
 Approach pose: retreat 40 mm along the board's -z, rotation 3 deg about the board's x axis

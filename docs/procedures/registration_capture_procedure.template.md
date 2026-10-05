@@ -147,9 +147,10 @@ python3 -m planereg.capture.plan_poses --sensor-in-base boot.json --camera boot/
     --board-half-size-mm 100 75 --out plan/
 ```
 
-(Use your board's half-sizes in place of 100 75.) It writes `plan/poses.csv`,
-`plan/plan_summary.txt` and a picture `plan/plan.png` (figure 2 shows the picture for
-the default settings). The plan with the default settings is:
+(Use your board's half-sizes in place of 100 75.) It writes three files: the pose
+list `plan/poses.csv` for the robot program, a report `plan/plan_summary.txt`
+(explained below), and a picture `plan/plan.png` (figure 2 shows the picture for the
+default settings). The plan with the default settings is:
 
 The board at three standoffs from the sensor (550, 750 and 950 mm), at a 3 x 3 grid
 of lateral positions covering 50 percent of the field at each standoff, facing the
