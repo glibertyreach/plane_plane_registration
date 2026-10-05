@@ -12,12 +12,14 @@ Run from anywhere:  python3 docs/procedures/build/fill_procedure.py
 from __future__ import annotations
 
 import json
+import os
 import pathlib
 import re
 import shutil
 import subprocess
 import sys
 import tempfile
+import textwrap
 
 import numpy as np
 
@@ -42,10 +44,32 @@ BOARD_HALF_SIZE_MM = ("100", "75")
 HELP_BLOCK = "Output of `python3 -m planereg.capture.{tool} --help`:\n\n```\n{text}```"
 
 
+HELP_COLUMNS = "76"
+"""Terminal width given to argparse when the help text is captured, so that every line of
+the quoted help fits the Word page at the code font size of build/reference.docx."""
+SUMMARY_WRAP_COLUMNS = 84
+"""Lines of the plan summary longer than this are wrapped (with their indent kept)."""
+
+
 def tool_help(tool: str) -> str:
+    environment = {**os.environ, "COLUMNS": HELP_COLUMNS}
     completed = subprocess.run([sys.executable, "-m", f"planereg.capture.{tool}", "--help"],
-                               capture_output=True, text=True, check=True)
+                               capture_output=True, text=True, check=True, env=environment)
     return HELP_BLOCK.format(tool=tool, text=completed.stdout)
+
+
+def wrap_summary(summary: str) -> str:
+    """Wrap the plan summary's long sentences so the quoted block fits the page; table rows
+    and short lines pass through unchanged."""
+    wrapped = []
+    for line in summary.splitlines():
+        indent = len(line) - len(line.lstrip(" "))
+        if len(line) <= SUMMARY_WRAP_COLUMNS:
+            wrapped.append(line)
+        else:
+            wrapped.extend(textwrap.wrap(line, SUMMARY_WRAP_COLUMNS, initial_indent=" " * indent,
+                                         subsequent_indent=" " * (indent + 2)))
+    return "\n".join(wrapped)
 
 
 def example_plan(work: pathlib.Path) -> str:
@@ -91,7 +115,7 @@ def plan_paragraph(summary: str) -> str:
         "Send `plan_summary.txt` to the engineer with the other deliverables (section 9). The\n"
         "example below is also kept as `figures/plan_example_summary.txt`.\n\n"
     )
-    return lead + "```\n" + summary.rstrip() + "\n```"
+    return lead + "```\n" + wrap_summary(summary.rstrip()) + "\n```"
 
 
 def main() -> int:

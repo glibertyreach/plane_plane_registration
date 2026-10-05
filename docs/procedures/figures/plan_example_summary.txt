@@ -1,5 +1,5 @@
 Registration pose plan
-Sensor-to-base transform: matrix from /tmp/tmpkrhyr8mh/sensor.json
+Sensor-to-base transform: matrix from /tmp/tmpkgpsbudk/sensor.json
 Camera: 640 x 480 px, half field 24.9 x 19.2 deg
 Board half size: 100 x 75 mm; lateral grid 3 x 3 at fill 0.5; edge margin 10 px
 Approach pose: retreat 40 mm along the board's -z, rotation 3 deg about the board's x axis

@@ -10,12 +10,12 @@ build() {
   local source="$1" title="$2"
   local dir; dir="$(cd "$(dirname "$source")" && pwd)"
   local base; base="$(basename "$source" .md)"
-  ( cd "$dir" && python3 - "$base" "$title" "$HERE/image_width.lua" <<'PY'
+  ( cd "$dir" && python3 - "$base" "$title" "$HERE/image_width.lua" "$HERE/reference.docx" <<'PY'
 import sys, pathlib, pypandoc, zipfile, shutil
-base, title, lua = sys.argv[1:4]
+base, title, lua, reference = sys.argv[1:5]
 pypandoc.convert_file(f"{base}.md", "docx", outputfile=f"{base}.docx",
                       extra_args=["--resource-path=.", f"--lua-filter={lua}", "--metadata", f"title={title}",
-                                  "--toc", "--toc-depth=1"])
+                                  "--toc", "--toc-depth=1", f"--reference-doc={reference}"])
 # pandoc omits the PNG default content type that strict validators expect; declare it.
 path = f"{base}.docx"; tmp = path + ".tmp"
 with zipfile.ZipFile(path) as zin:

@@ -123,8 +123,10 @@ This step takes six captures of the board at hand-chosen poses.
 4. Build the manifest and run the bootstrap (the engineer can do this):
 
 ```
-python3 -m sphcal.cli.make_manifest --pose-log boot_pose_log.csv --captures boot/ --format csv --out boot/manifest.csv
-python3 -m planereg.capture.bootstrap --manifest boot/manifest.csv --out boot.json
+python3 -m sphcal.cli.make_manifest --pose-log boot_pose_log.csv \
+    --captures boot/ --format csv --out boot/manifest.csv
+python3 -m planereg.capture.bootstrap --manifest boot/manifest.csv \
+    --out boot.json
 ```
 
 The bootstrap prints one line per pose with the board it found (how many pixels,
@@ -143,8 +145,8 @@ Run the plan tool with the rough sensor position, one of the bootstrap captures 
 the sensor's field of view) and the measured board half-sizes:
 
 ```
-python3 -m planereg.capture.plan_poses --sensor-in-base boot.json --camera boot/boot01_Index00.mc \
-    --board-half-size-mm 100 75 --out plan/
+python3 -m planereg.capture.plan_poses --sensor-in-base boot.json \
+    --camera boot/boot01_Index00.mc --board-half-size-mm 100 75 --out plan/
 ```
 
 (Use your board's half-sizes in place of 100 75.) It writes three files: the pose
@@ -191,7 +193,8 @@ Registration pose plan
 Sensor-to-base transform: matrix from boot.json
 Camera: 640 x 480 px, half field 24.9 x 19.2 deg
 Board half size: 100 x 75 mm; lateral grid 3 x 3 at fill 0.5; edge margin 10 px
-Approach pose: retreat 40 mm along the board's -z, rotation 3 deg about the board's x axis
+Approach pose: retreat 40 mm along the board's -z, rotation 3 deg about the board's
+  x axis
 
 Poses per standoff and tilt:
   standoff_mm tilt_deg  planned  dropped   kept  held out
@@ -204,25 +207,30 @@ Poses per standoff and tilt:
           950      0.0        9        0      9         0
           950     15.0       36        0     36         7
           950     30.0       36        0     36         9
-  8 poses were dropped because a board corner would come within 10 px of the image edge; use a smaller --lateral-fill, smaller tilts, a smaller board or larger standoffs to keep more of them.
+    8 poses were dropped because a board corner would come within 10 px of the image
+    edge; use a smaller --lateral-fill, smaller tilts, a smaller board or larger
+    standoffs to keep more of them.
 
 Quality of the plan, all planned poses (235 poses):
   normal spread      0.2850  (registration minimum 0.05)
   similarity spread  0.1306  (registration minimum 0.01)
   predicted rotation RMS error     0.0458 deg
   predicted translation RMS error  0.0458 mm
-  (assumed noise: normals 0.2 deg, offsets 0.2 mm; an order of magnitude, good to a factor of about two)
+    (assumed noise: normals 0.2 deg, offsets 0.2 mm; an order of magnitude, good to
+    a factor of about two)
 
 Quality of the plan, poses not held out (188 poses):
   normal spread      0.2822  (registration minimum 0.05)
   similarity spread  0.1289  (registration minimum 0.01)
   predicted rotation RMS error     0.0517 deg
   predicted translation RMS error  0.0517 mm
-  (assumed noise: normals 0.2 deg, offsets 0.2 mm; an order of magnitude, good to a factor of about two)
+    (assumed noise: normals 0.2 deg, offsets 0.2 mm; an order of magnitude, good to
+    a factor of about two)
 
 Largest incidence angle (board normal against the line of sight): 30.0 deg
 Total: 235 poses, 47 tagged held out (seed 0).
-Both sub-procedures together: 2 x 235 poses = 470 pose visits; x 5 frames = 2350 capture files.
+Both sub-procedures together: 2 x 235 poses = 470 pose visits; x 5 frames = 2350
+  capture files.
 ```
 
 The pose budget. This is the first run: a few hundred poses are enough to find out
@@ -318,8 +326,12 @@ recommended anyway as a backup). The robot program appends one line per pose to 
 CSV file, the pose log, with these columns:
 
 ```
-pose_id, kind, radius_mm, half_width_mm, half_height_mm, x_mm, y_mm, z_mm, rotation_type, r1, r2, r3, r4, j1, j2, j3, j4, j5, j6, approach_j1, ..., approach_j6
+pose_id, kind, radius_mm, half_width_mm, half_height_mm,
+x_mm, y_mm, z_mm, rotation_type, r1, r2, r3, r4,
+j1, j2, j3, j4, j5, j6, approach_j1, ..., approach_j6
 ```
+
+(one header line in the file; it is broken here only to fit the page)
 
 - `pose_id`: exactly the id from `poses.csv`, which is also the start of the file names.
 - `kind`: `board`. `radius_mm`: empty.
@@ -332,17 +344,22 @@ pose_id, kind, radius_mm, half_width_mm, half_height_mm, x_mm, y_mm, z_mm, rotat
 - `j1..j6` and `approach_j1..approach_j6`: the joint angles in degrees, if the
   controller reports them; otherwise leave the columns out entirely.
 
-Example line:
+Example line, one line in the file, broken here only to fit the page (the first
+part is the pose, the second the six joint angles at the target and the six at the
+approach pose):
 
 ```
-b_z0650_t24_a090_05,board,,100.0,75.0,850.11,-12.70,470.55,euler_zyx_deg,-91.3,19.8,0.4,,12.1,-35.6,88.2,3.4,41.0,-8.7,11.9,-36.0,88.9,3.1,40.5,-8.4
+b_z0650_t24_a090_05,board,,100.0,75.0,850.11,-12.70,470.55,euler_zyx_deg,-91.3,19.8,0.4,,
+12.1,-35.6,88.2,3.4,41.0,-8.7,11.9,-36.0,88.9,3.1,40.5,-8.4
 ```
 
 After each sub-procedure, the manifest is built from its pose log and its capture folder:
 
 ```
-python3 -m sphcal.cli.make_manifest --pose-log pose_log_A.csv --captures captures_A/ --format csv --out captures_A/manifest.csv
-python3 -m sphcal.cli.make_manifest --pose-log pose_log_B.csv --captures captures_B/ --format csv --out captures_B/manifest.csv
+python3 -m sphcal.cli.make_manifest --pose-log pose_log_A.csv \
+    --captures captures_A/ --format csv --out captures_A/manifest.csv
+python3 -m sphcal.cli.make_manifest --pose-log pose_log_B.csv \
+    --captures captures_B/ --format csv --out captures_B/manifest.csv
 ```
 
 The tool matches every file to its pose id, converts the orientation to the standard
@@ -359,8 +376,10 @@ Run the quick check on each folder as soon as its captures are complete, while t
 robot and the board are still set up:
 
 ```
-python3 -m planereg.capture.check_captures --manifest captures_A/manifest.csv --sensor-in-base boot.json --pose-log pose_log_A.csv --out captures_A/check.json
-python3 -m planereg.capture.check_captures --manifest captures_B/manifest.csv --sensor-in-base boot.json --pose-log pose_log_B.csv --out captures_B/check.json
+python3 -m planereg.capture.check_captures --manifest captures_A/manifest.csv \
+    --sensor-in-base boot.json --pose-log pose_log_A.csv --out captures_A/check.json
+python3 -m planereg.capture.check_captures --manifest captures_B/manifest.csv \
+    --sensor-in-base boot.json --pose-log pose_log_B.csv --out captures_B/check.json
 ```
 
 It prints one line per pose and a verdict. Things it flags, and what they mean:
@@ -447,7 +466,8 @@ usage: plan_poses.py [-h] --sensor-in-base PATH [--camera PATH]
                      [--standoffs-mm STANDOFFS_MM [STANDOFFS_MM ...]]
                      [--tilts-deg TILTS_DEG [TILTS_DEG ...]]
                      [--azimuths-deg AZIMUTHS_DEG [AZIMUTHS_DEG ...]]
-                     [--lateral-fill LATERAL_FILL] [--lateral-positions NX NY]
+                     [--lateral-fill LATERAL_FILL]
+                     [--lateral-positions NX NY]
                      [--edge-margin-px EDGE_MARGIN_PX]
                      [--approach-retreat-mm APPROACH_RETREAT_MM]
                      [--approach-rotation-deg APPROACH_ROTATION_DEG]
@@ -458,61 +478,63 @@ usage: plan_poses.py [-h] --sensor-in-base PATH [--camera PATH]
                      [--frames-per-pose FRAMES_PER_POSE] --out DIR
 
 Plan the robot poses of a registration session: board poses at several
-standoffs, lateral positions, tilts and azimuths, each with an approach pose
-for the minimizing-backlash sub-procedure. Writes poses.csv, plan_summary.txt
-and plan.png.
+standoffs, lateral positions, tilts and azimuths, each with an approach
+pose for the minimizing-backlash sub-procedure. Writes poses.csv,
+plan_summary.txt and plan.png.
 
 options:
   -h, --help            show this help message and exit
   --sensor-in-base PATH
-                        JSON with {"matrix": [16 floats, row-major 4x4 sensor-
-                        to-base]} (the bootstrap tool writes this) or sphcal's
-                        {"bootstrap": [{"pose_id", "base_xyz", "sensor_xyz"},
-                        ...]}
-  --camera PATH         .mc capture file whose header gives fx, fy, cx, cy and
-                        whose array gives the image size
-  --fov-deg H V         full horizontal and vertical field of view in degrees
-                        (with --image-size)
+                        JSON with {"matrix": [16 floats, row-major 4x4
+                        sensor-to-base]} (the bootstrap tool writes this)
+                        or sphcal's {"bootstrap": [{"pose_id", "base_xyz",
+                        "sensor_xyz"}, ...]}
+  --camera PATH         .mc capture file whose header gives fx, fy, cx, cy
+                        and whose array gives the image size
+  --fov-deg H V         full horizontal and vertical field of view in
+                        degrees (with --image-size)
   --image-size W H      image width and height in pixels
   --board-half-size-mm HALF_WIDTH HALF_HEIGHT
-                        half the long edge and half the short edge (default
-                        (100.0, 75.0))
+                        half the long edge and half the short edge
+                        (default (100.0, 75.0))
   --standoffs-mm STANDOFFS_MM [STANDOFFS_MM ...]
-                        sensor-z depths of the board centers (default (550.0,
-                        750.0, 950.0))
+                        sensor-z depths of the board centers (default
+                        (550.0, 750.0, 950.0))
   --tilts-deg TILTS_DEG [TILTS_DEG ...]
-                        board tilts away from facing the sensor; 0 is planned
-                        once per position (default (0.0, 15.0, 30.0))
+                        board tilts away from facing the sensor; 0 is
+                        planned once per position (default (0.0, 15.0,
+                        30.0))
   --azimuths-deg AZIMUTHS_DEG [AZIMUTHS_DEG ...]
                         azimuths of the tilt axis in the board plane, 0 =
                         board x axis (default (0.0, 90.0, 180.0, 270.0))
   --lateral-fill LATERAL_FILL
-                        fraction of the half field covered by board centers at
-                        each standoff (default 0.5)
+                        fraction of the half field covered by board
+                        centers at each standoff (default 0.5)
   --lateral-positions NX NY
                         board positions across the field: columns and rows
                         (default (3, 3))
   --edge-margin-px EDGE_MARGIN_PX
-                        board corners must project this far inside the image
-                        (default 10.0)
+                        board corners must project this far inside the
+                        image (default 10.0)
   --approach-retreat-mm APPROACH_RETREAT_MM
-                        retreat of the approach pose along the board's own -z
-                        (default 40.0)
+                        retreat of the approach pose along the board's own
+                        -z (default 40.0)
   --approach-rotation-deg APPROACH_ROTATION_DEG
-                        rotation of the approach pose about the board's own x
-                        axis (default 3.0)
+                        rotation of the approach pose about the board's
+                        own x axis (default 3.0)
   --holdout-fraction HOLDOUT_FRACTION
-                        fraction of the poses tagged as held out (default 0.2)
+                        fraction of the poses tagged as held out (default
+                        0.2)
   --seed SEED           seed of the random held-out subset
   --target-pose-count N
-                        choose the lateral grid so that the plan has about N
-                        poses (overrides --lateral-positions)
+                        choose the lateral grid so that the plan has about
+                        N poses (overrides --lateral-positions)
   --noise-normal-deg NOISE_NORMAL_DEG
-                        assumed normal noise for the error prediction (default
-                        0.2)
+                        assumed normal noise for the error prediction
+                        (default 0.2)
   --noise-offset-mm NOISE_OFFSET_MM
-                        assumed offset noise for the error prediction (default
-                        0.2)
+                        assumed offset noise for the error prediction
+                        (default 0.2)
   --frames-per-pose FRAMES_PER_POSE
                         frames captured per pose, for the capture counts
                         (default 5)
@@ -532,10 +554,10 @@ usage: bootstrap.py [-h] --manifest PATH --out PATH
                     [--max-normal-deg MAX_NORMAL_DEG]
                     [--max-offset-mm MAX_OFFSET_MM]
 
-Find the sensor roughly in the robot base frame from four or more hand-jogged
-board captures (manifest made by sphcal's make_manifest): segment the board in
-each, register, print the table and the transform, and write the JSON that the
-plan tool reads.
+Find the sensor roughly in the robot base frame from four or more hand-
+jogged board captures (manifest made by sphcal's make_manifest): segment
+the board in each, register, print the table and the transform, and write
+the JSON that the plan tool reads.
 
 options:
   -h, --help            show this help message and exit
@@ -545,14 +567,14 @@ options:
                         a pixel must be valid in this fraction of a pose's
                         frames (default 0.5)
   --border-margin-px BORDER_MARGIN_PX
-                        warn when the board mask comes this close to the image
-                        border (default 4)
+                        warn when the board mask comes this close to the
+                        image border (default 4)
   --min-pose-count MIN_POSE_COUNT
                         fewest segmented poses the registration may use
                         (default 4)
   --min-normal-spread MIN_NORMAL_SPREAD
-                        smallest accepted spread of the board normals (default
-                        0.05)
+                        smallest accepted spread of the board normals
+                        (default 0.05)
   --max-rms-normal-deg MAX_RMS_NORMAL_DEG
                         largest accepted RMS normal residual (default 1.0)
   --max-rms-offset-mm MAX_RMS_OFFSET_MM
@@ -580,9 +602,9 @@ usage: check_captures.py [-h] --manifest PATH [--sensor-in-base PATH]
                          [--out PATH]
 
 Quick check of a capture set before the long registration: valid pixels,
-border contact of the board mask, plane fit residuals, agreement of each pose
-with the registration of the set, conditioning of the set, and (with a pose
-log) the joint motion signs.
+border contact of the board mask, plane fit residuals, agreement of each
+pose with the registration of the set, conditioning of the set, and (with
+a pose log) the joint motion signs.
 
 options:
   -h, --help            show this help message and exit
@@ -593,11 +615,11 @@ options:
   --pose-log PATH       pose log CSV with the joint columns j1..j6 and
                         approach_j1..approach_j6 (optional)
   --plane-rms-warn-mm PLANE_RMS_WARN_MM
-                        flag a pose whose plane fit RMS exceeds this (default
-                        1.0)
+                        flag a pose whose plane fit RMS exceeds this
+                        (default 1.0)
   --min-valid-fraction MIN_VALID_FRACTION
-                        flag a pose valid in a smaller fraction of its frames
-                        (default 0.5)
+                        flag a pose valid in a smaller fraction of its
+                        frames (default 0.5)
   --border-margin-px BORDER_MARGIN_PX
                         flag a board mask within this many pixels of the
                         border (default 4)
@@ -608,9 +630,10 @@ options:
                         flag a pose whose offset residual exceeds this
                         (default 1.0)
   --outlier-rounds OUTLIER_ROUNDS
-                        leave out up to this many poses (the worst per round)
-                        from the registration, so that one wrong pose does not
-                        flag the others (default 3; 0 keeps every pose)
+                        leave out up to this many poses (the worst per
+                        round) from the registration, so that one wrong
+                        pose does not flag the others (default 3; 0 keeps
+                        every pose)
   --joint-sign-warn-fraction JOINT_SIGN_WARN_FRACTION
                         warn about a joint whose majority-sign fraction is
                         below this (default 0.9)
@@ -642,7 +665,7 @@ B.4 Make a private Python environment and install both packages into it:
 python3 -m venv .venv
 .venv\Scripts\activate        (Windows)
 source .venv/bin/activate     (Linux)
-python3 -m pip install -e ../../depth_calibration   (the sphcal repository, by its path)
+python3 -m pip install -e ../../depth_calibration    (sphcal, by its path)
 python3 -m pip install -e ".[figures,test]"
 ```
 

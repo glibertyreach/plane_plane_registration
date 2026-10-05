@@ -123,8 +123,10 @@ This step takes six captures of the board at hand-chosen poses.
 4. Build the manifest and run the bootstrap (the engineer can do this):
 
 ```
-python3 -m sphcal.cli.make_manifest --pose-log boot_pose_log.csv --captures boot/ --format csv --out boot/manifest.csv
-python3 -m planereg.capture.bootstrap --manifest boot/manifest.csv --out boot.json
+python3 -m sphcal.cli.make_manifest --pose-log boot_pose_log.csv \
+    --captures boot/ --format csv --out boot/manifest.csv
+python3 -m planereg.capture.bootstrap --manifest boot/manifest.csv \
+    --out boot.json
 ```
 
 The bootstrap prints one line per pose with the board it found (how many pixels,
@@ -143,8 +145,8 @@ Run the plan tool with the rough sensor position, one of the bootstrap captures 
 the sensor's field of view) and the measured board half-sizes:
 
 ```
-python3 -m planereg.capture.plan_poses --sensor-in-base boot.json --camera boot/boot01_Index00.mc \
-    --board-half-size-mm 100 75 --out plan/
+python3 -m planereg.capture.plan_poses --sensor-in-base boot.json \
+    --camera boot/boot01_Index00.mc --board-half-size-mm 100 75 --out plan/
 ```
 
 (Use your board's half-sizes in place of 100 75.) It writes three files: the pose
@@ -255,8 +257,12 @@ recommended anyway as a backup). The robot program appends one line per pose to 
 CSV file, the pose log, with these columns:
 
 ```
-pose_id, kind, radius_mm, half_width_mm, half_height_mm, x_mm, y_mm, z_mm, rotation_type, r1, r2, r3, r4, j1, j2, j3, j4, j5, j6, approach_j1, ..., approach_j6
+pose_id, kind, radius_mm, half_width_mm, half_height_mm,
+x_mm, y_mm, z_mm, rotation_type, r1, r2, r3, r4,
+j1, j2, j3, j4, j5, j6, approach_j1, ..., approach_j6
 ```
+
+(one header line in the file; it is broken here only to fit the page)
 
 - `pose_id`: exactly the id from `poses.csv`, which is also the start of the file names.
 - `kind`: `board`. `radius_mm`: empty.
@@ -269,17 +275,22 @@ pose_id, kind, radius_mm, half_width_mm, half_height_mm, x_mm, y_mm, z_mm, rotat
 - `j1..j6` and `approach_j1..approach_j6`: the joint angles in degrees, if the
   controller reports them; otherwise leave the columns out entirely.
 
-Example line:
+Example line, one line in the file, broken here only to fit the page (the first
+part is the pose, the second the six joint angles at the target and the six at the
+approach pose):
 
 ```
-b_z0650_t24_a090_05,board,,100.0,75.0,850.11,-12.70,470.55,euler_zyx_deg,-91.3,19.8,0.4,,12.1,-35.6,88.2,3.4,41.0,-8.7,11.9,-36.0,88.9,3.1,40.5,-8.4
+b_z0650_t24_a090_05,board,,100.0,75.0,850.11,-12.70,470.55,euler_zyx_deg,-91.3,19.8,0.4,,
+12.1,-35.6,88.2,3.4,41.0,-8.7,11.9,-36.0,88.9,3.1,40.5,-8.4
 ```
 
 After each sub-procedure, the manifest is built from its pose log and its capture folder:
 
 ```
-python3 -m sphcal.cli.make_manifest --pose-log pose_log_A.csv --captures captures_A/ --format csv --out captures_A/manifest.csv
-python3 -m sphcal.cli.make_manifest --pose-log pose_log_B.csv --captures captures_B/ --format csv --out captures_B/manifest.csv
+python3 -m sphcal.cli.make_manifest --pose-log pose_log_A.csv \
+    --captures captures_A/ --format csv --out captures_A/manifest.csv
+python3 -m sphcal.cli.make_manifest --pose-log pose_log_B.csv \
+    --captures captures_B/ --format csv --out captures_B/manifest.csv
 ```
 
 The tool matches every file to its pose id, converts the orientation to the standard
@@ -296,8 +307,10 @@ Run the quick check on each folder as soon as its captures are complete, while t
 robot and the board are still set up:
 
 ```
-python3 -m planereg.capture.check_captures --manifest captures_A/manifest.csv --sensor-in-base boot.json --pose-log pose_log_A.csv --out captures_A/check.json
-python3 -m planereg.capture.check_captures --manifest captures_B/manifest.csv --sensor-in-base boot.json --pose-log pose_log_B.csv --out captures_B/check.json
+python3 -m planereg.capture.check_captures --manifest captures_A/manifest.csv \
+    --sensor-in-base boot.json --pose-log pose_log_A.csv --out captures_A/check.json
+python3 -m planereg.capture.check_captures --manifest captures_B/manifest.csv \
+    --sensor-in-base boot.json --pose-log pose_log_B.csv --out captures_B/check.json
 ```
 
 It prints one line per pose and a verdict. Things it flags, and what they mean:
@@ -406,7 +419,7 @@ B.4 Make a private Python environment and install both packages into it:
 python3 -m venv .venv
 .venv\Scripts\activate        (Windows)
 source .venv/bin/activate     (Linux)
-python3 -m pip install -e ../../depth_calibration   (the sphcal repository, by its path)
+python3 -m pip install -e ../../depth_calibration    (sphcal, by its path)
 python3 -m pip install -e ".[figures,test]"
 ```
 
