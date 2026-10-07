@@ -1,9 +1,0 @@
-numpy>=1.26
-scipy>=1.11
-sphcal>=0.1.0
-
-[figures]
-matplotlib>=3.8
-
-[test]
-pytest>=8.0

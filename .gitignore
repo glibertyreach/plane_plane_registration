@@ -1,3 +1,4 @@
 /build/
 __pycache__/
 docs/presentations/build/node_modules/
+*.egg-info/
