@@ -751,9 +751,11 @@ Board:
   flats): a 6 to 10 mm float glass plate is flat to better than 0.05 mm over 200 mm
   as delivered; it must be matte-painted on the front face and bonded or clamped to
   the board adapter. Glass is the better choice when no grinding shop is at hand.
-- A small granite surface plate (Starrett or Mitutoyo, grade A or AA) is flat to a
-  few micrometers but black and heavy; it works if the front is painted matte light
-  gray and the robot carries the weight (a 200 x 150 x 50 mm plate is about 4 kg).
+
+Either way the supplier's or the grinding shop's flatness report is the starting
+document (1d), and the 0.05 mm is confirmed in-house with the straightedge and
+feeler leaf after painting and after mounting, because that is the state the sensor
+sees; only the two materials of 1d are specified.
 
 Measuring instruments (section 1c), all stocked by McMaster-Carr, Transcat,
 MSI-Viking and the usual tool suppliers:

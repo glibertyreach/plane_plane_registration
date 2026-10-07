@@ -218,8 +218,8 @@
     "rows": [
      [
       "Board plate",
-      "McMaster-Carr MIC-6 plus a grinding shop; Edmund Optics float glass; a small granite surface plate",
-      "Painted matte after grinding; flatness checked after mounting"
+      "McMaster-Carr MIC-6 plus a grinding shop; Edmund Optics float glass",
+      "Ground or glass to 0.05 mm with a flatness report; painted matte; re-checked in-house after painting and mounting"
      ],
      [
       "Dial indicator and magnetic base",
@@ -239,7 +239,7 @@
     ]
    },
    "caption": "From suppliers' web pages, October 2026; not an endorsement. Confirm flatness, finish and price before ordering.",
-   "notes": "This is appendix A of the procedure in brief, the stage-1 supplier list reduced to the items this procedure uses. MIC-6 tooling plate is sold with a stated flatness of about 0.13 mm, coarser than the 0.05 mm asked for, so the plate is ordered oversize and finish-ground by a local shop; float glass is flat enough as delivered and is the better choice where no grinding shop is at hand; a small granite surface plate works if its front is painted and the robot carries the weight. The instruments are stock items. The adapter is a one-off job for a machine shop, built to drawing SC1-05."
+   "notes": "This is appendix A of the procedure in brief, the stage-1 supplier list reduced to the items this procedure uses. The plate is one of the two materials of the specification on the previous slide: MIC-6 tooling plate is sold with a stated flatness of about 0.13 mm, coarser than the 0.05 mm asked for, so it is ordered oversize and finish-ground by a local shop; float glass is flat enough as delivered and is the better choice where no grinding shop is at hand. In both cases the supplier's or grinding shop's flatness report is the starting document, and the 0.05 mm is confirmed in-house with the straightedge and feeler leaf after painting and after mounting, the state the sensor sees. The instruments are stock items. The adapter is a one-off job for a machine shop, built to drawing SC1-05."
   },
   {
    "id": "runout",
