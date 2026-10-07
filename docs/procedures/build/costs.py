@@ -67,11 +67,12 @@ def usd_range(low: int, high: int) -> str:
 
 
 def build_table() -> str:
-    rows = ["| Item | Quantity | Description | Drawing | Estimated cost (USD) | From stage 1 |",
-            "|---|---|---|---|---|---|"]
+    # The items are described in section 1a of the procedure; this table carries only what 1a does not.
+    rows = ["| Item | Quantity | Drawing | Estimated cost (USD) | From stage 1 |",
+            "|---|---|---|---|---|"]
     drawing = {"Flat target (board)": "SC1-05 (outline)", "Board adapter": "SC1-05", "Run-out fixture": "none needed"}
     for i in BUILD_ITEMS:
-        rows.append(f"| {i.name} | 1 | {i.purpose} | {drawing[i.name]} | {usd_range(i.low, i.high)} | "
+        rows.append(f"| {i.name} | 1 | {drawing[i.name]} | {usd_range(i.low, i.high)} | "
                     f"{'yes' if i.in_hand_from_stage_1 else 'no'} |")
     return "\n".join(rows)
 

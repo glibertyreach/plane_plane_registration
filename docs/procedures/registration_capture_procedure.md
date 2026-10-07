@@ -65,11 +65,11 @@ shop drawing; appendix A lists suppliers.
 Nothing, if the stage-1 session has been run: the three items below exist. Otherwise
 they are built as in the stage-1 procedure, to the same drawing and specification.
 
-| Item | Quantity | Description | Drawing | Estimated cost (USD) | From stage 1 |
-|---|---|---|---|---|---|
-| Flat target (board) | 1 | 200 x 150 mm plate, specification in 1d | SC1-05 (outline) | $50 to $400 | yes |
-| Board adapter | 1 | Flange plate with pads, edge pins and clamp fingers, drawing SC1-05 | SC1-05 | $250 to $600 | yes |
-| Run-out fixture | 1 | Dial indicator on a magnetic base on a bolted steel plate, section 1e | none needed | $240 to $570 | yes |
+| Item | Quantity | Drawing | Estimated cost (USD) | From stage 1 |
+|---|---|---|---|---|
+| Flat target (board) | 1 | SC1-05 (outline) | $50 to $400 | yes |
+| Board adapter | 1 | SC1-05 | $250 to $600 | yes |
+| Run-out fixture | 1 | none needed | $240 to $570 | yes |
 
 The rigid sensor mount is built from the existing drawing from previous work and is
 not estimated here.

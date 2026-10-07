@@ -13,7 +13,7 @@
    "id": "product",
    "layout": "title_only",
    "section": "Introduction",
-   "title": "The session produces two capture sets and an exact log of poses",
+   "title": "Two capture sets and an exact log of poses",
    "stats": [
     {
      "value": "235",
@@ -135,7 +135,7 @@
    "id": "bootstrap",
    "layout": "title_only",
    "section": "Setup",
-   "title": "Six captures locate the sensor well enough to plan",
+   "title": "Six captures locate the sensor roughly",
    "boot": [
     {
      "id": "boot01",
@@ -173,7 +173,7 @@
    "id": "plan",
    "layout": "title_only",
    "section": "Capture",
-   "title": "The plan spreads 235 poses through the volume",
+   "title": "235 poses spread through the volume",
    "image": "assets/plan_example.png",
    "stats": [
     {
@@ -271,7 +271,7 @@
    "id": "approach",
    "layout": "title_only",
    "section": "Capture",
-   "title": "Sub-procedure B: the same final move onto every pose",
+   "title": "Sub-procedure B: the same final move",
    "image": "assets/approach_b.png",
    "steps": [
     {
@@ -301,7 +301,7 @@
    "id": "manifest",
    "layout": "title_only",
    "section": "Capture",
-   "title": "Poses are recorded in a pose log, one line per pose",
+   "title": "Poses are recorded in a pose log",
    "columns": [
     {
      "head": "What the log holds",
@@ -347,7 +347,7 @@
    "id": "checks",
    "layout": "title_only",
    "section": "Checks",
-   "title": "Check each capture set before the other run starts",
+   "title": "Check each capture set before the next run",
    "cards": [
     {
      "head": "Board not found or cut off",
