@@ -798,8 +798,8 @@ MSI-Viking and the usual tool suppliers:
   to $150.
 - Magnetic base: Noga MG71003 or DG-61003 with fine adjustment, about $140 to $320.
 - Calipers with depth rod, 150 mm: Mitutoyo or Starrett, about $30 to $150.
-- Straightedge: 300 mm, DIN 874 grade 0 or better, about $60 to $200; feeler gauge
-  set with a 0.05 mm leaf.
+- Straightedge: 300 mm, DIN 874 grade 0 or better, about $60 to $200, and a feeler
+  gauge set with a 0.05 mm leaf, about $15 to $40 (together the $75 to $240 of 1c).
 
 Machine shop: the board adapter and the run-out base plate (drawing SC1-05 in
 appendix D for the adapter; the base plate is a plain drilled plate, section 1e).
@@ -859,8 +859,10 @@ options:
                         planned once per position (default (0.0, 15.0,
                         30.0))
   --azimuths-deg AZIMUTHS_DEG [AZIMUTHS_DEG ...]
-                        azimuths of the tilt axis in the board plane, 0 =
-                        board x axis (default (0.0, 90.0, 180.0, 270.0))
+                        azimuths of the tilt axis in the board plane: 0
+                        tilts the top edge toward the sensor, 90 the right
+                        edge, 180 the bottom edge, 270 the left edge
+                        (default (0.0, 90.0, 180.0, 270.0))
   --lateral-fill LATERAL_FILL
                         fraction of the half field covered by board
                         centers at each standoff (default 0.5)
@@ -927,9 +929,9 @@ options:
   --target-offset-mm TARGET_OFFSET_MM
                         distance from the logged frame's origin to the
                         board's front face along its +z, in mm; 0 when the
-                        logged frame is the board tool frame, the plate
-                        thickness D when the flange pose was logged
-                        (default 0.0)
+                        logged frame is the board tool frame, the flange-
+                        face-to-front-face distance D of the procedure
+                        when the flange pose was logged (default 0.0)
   --min-pose-count MIN_POSE_COUNT
                         fewest segmented poses the registration may use
                         (default 4)
@@ -988,9 +990,9 @@ options:
   --target-offset-mm TARGET_OFFSET_MM
                         distance from the logged frame's origin to the
                         board's front face along its +z, in mm; 0 when the
-                        logged frame is the board tool frame, the plate
-                        thickness D when the flange pose was logged
-                        (default 0.0)
+                        logged frame is the board tool frame, the flange-
+                        face-to-front-face distance D of the procedure
+                        when the flange pose was logged (default 0.0)
   --normal-residual-warn-deg NORMAL_RESIDUAL_WARN_DEG
                         flag a pose whose normal residual exceeds this
                         (default 1.0)

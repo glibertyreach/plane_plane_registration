@@ -104,7 +104,7 @@ def board_plane_in_base(board_to_base: RigidTransform, target_offset_mm: float =
     """The board's front-face plane in the base frame, from the reported pose of the board tool
     frame (T -> B). ``target_offset_mm`` is the distance of the face along the frame's +z axis
     from the frame's origin: 0 when the robot reports the board tool frame itself (the stage-1
-    procedure's TOOL_BOARD), or the plate thickness / adapter offset D when the robot reports
+    procedure's TOOL_BOARD), or the flange-face-to-front-face distance D when the robot reports
     the flange frame instead (spec Eq. 3, o = (0, 0, 1, -D))."""
     plane_in_tool = Plane(BOARD_FACE_NORMAL_IN_TOOL_FRAME, -float(target_offset_mm))
     return transform_plane(board_to_base, plane_in_tool).unit()

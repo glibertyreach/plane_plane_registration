@@ -718,8 +718,8 @@ MSI-Viking and the usual tool suppliers:
   to $150.
 - Magnetic base: Noga MG71003 or DG-61003 with fine adjustment, about $140 to $320.
 - Calipers with depth rod, 150 mm: Mitutoyo or Starrett, about $30 to $150.
-- Straightedge: 300 mm, DIN 874 grade 0 or better, about $60 to $200; feeler gauge
-  set with a 0.05 mm leaf.
+- Straightedge: 300 mm, DIN 874 grade 0 or better, about $60 to $200, and a feeler
+  gauge set with a 0.05 mm leaf, about $15 to $40 (together the $75 to $240 of 1c).
 
 Machine shop: the board adapter and the run-out base plate (drawing SC1-05 in
 appendix D for the adapter; the base plate is a plain drilled plate, section 1e).

@@ -360,8 +360,8 @@ def build_parser() -> argparse.ArgumentParser:
                         help="flag a board mask within this many pixels of the border (default %(default)s)")
     parser.add_argument("--target-offset-mm", type=float, default=d.target_offset_mm,
                         help="distance from the logged frame's origin to the board's front face along its +z, in mm; "
-                             "0 when the logged frame is the board tool frame, the plate thickness D when the "
-                             "flange pose was logged (default %(default)s)")
+                             "0 when the logged frame is the board tool frame, the flange-face-to-front-face distance D "
+                             "of the procedure when the flange pose was logged (default %(default)s)")
     parser.add_argument("--normal-residual-warn-deg", type=float, default=d.normal_residual_warn_deg,
                         help="flag a pose whose normal residual exceeds this (default %(default)s)")
     parser.add_argument("--offset-residual-warn-mm", type=float, default=d.offset_residual_warn_mm,

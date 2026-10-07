@@ -30,7 +30,8 @@ pass work; without it a reviewer sees two plausible sentences and lets both stan
    which governs rather than guessing, since every finding depends on it.
 
 2. **Get the text of every document.** Run `scripts/extract_text.py` on each file;
-   it writes plain text for Markdown, JSON content files (every string, with its key
+   it writes plain text, into a temporary folder it prints (or `--out DIR`), never next
+   to the inputs, for Markdown, JSON content files (every string, with its key
    path), Word files and PowerPoint files (slide text and speaker notes, slide by
    slide). Read the extracted text in full. Derived documents hide restatements in
    places a reader skips: speaker notes, figure captions, table footers, the "notes"

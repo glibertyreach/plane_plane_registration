@@ -3,8 +3,10 @@
 
 Usage:  python3 extract_text.py <file> [<file> ...] [--out DIR]
 
-For each input file one text file is written (next to the input, or in --out), named
-<basename>.txt, holding every statement with a location a reader can cite:
+For each input file one text file is written, named <basename>.txt, holding every statement
+with a location a reader can cite. The files go to --out, or, when --out is not given, to a
+fresh folder under the system temporary directory (printed), never next to the inputs: a
+document set under review must not acquire stray files.
   .md / .txt   : the file as is, each line prefixed with its line number
   .json        : every string value, prefixed with its key path (slides[3].notes, ...)
   .docx        : the paragraphs and table cells, in document order, numbered
@@ -18,6 +20,7 @@ from __future__ import annotations
 import json
 import re
 import sys
+import tempfile
 import zipfile
 from pathlib import Path
 from xml.etree import ElementTree as ET
@@ -113,14 +116,15 @@ def main(argv: list[str]) -> int:
             files.append(Path(argv[i])); i += 1
     if not files:
         print(__doc__); return 2
+    if out_dir is None:
+        out_dir = Path(tempfile.mkdtemp(prefix="consistency-pass-"))
+    out_dir.mkdir(parents=True, exist_ok=True)
     for f in files:
         extractor = EXTRACTORS.get(f.suffix.lower())
         if extractor is None:
             print(f"skip {f}: no extractor for {f.suffix}"); continue
         text = extractor(f)
-        target = (out_dir or f.parent) / (f.name + ".txt")
-        if out_dir:
-            out_dir.mkdir(parents=True, exist_ok=True)
+        target = out_dir / (f.name + ".txt")
         target.write_text(text, encoding="utf-8")
         print(f"{f} -> {target} ({len(text.splitlines())} lines)")
     return 0

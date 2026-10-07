@@ -26,8 +26,10 @@ Frames and conventions (millimeters, degrees at the interface)
     orientation      z points from the board center toward the sensor origin (the board "faces"
                      the sensor), x is the sensor x axis made perpendicular to z; the board is then
                      tilted by the tilt angle about the in-plane axis at the azimuth (azimuth 0 is
-                     the board x axis, 90 the board y axis). A tilt of zero is planned once per
-                     lateral position, with azimuth 0.
+                     the board x axis, 90 the board y axis; seen in the sensor's picture, azimuth
+                     0 brings the top edge toward the sensor, 90 the right edge, 180 the bottom
+                     edge, 270 the left edge). A tilt of zero is planned once per lateral
+                     position, with azimuth 0.
     drop rule        a pose whose four corners do not all project at least ``edge_margin_px`` inside
                      the image is dropped and counted.
     order            standoff, then lateral position (serpentine over the grid so that consecutive
@@ -565,7 +567,8 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--tilts-deg", type=float, nargs="+", default=d.tilts_deg,
                         help="board tilts away from facing the sensor; 0 is planned once per position (default %(default)s)")
     parser.add_argument("--azimuths-deg", type=float, nargs="+", default=d.azimuths_deg,
-                        help="azimuths of the tilt axis in the board plane, 0 = board x axis (default %(default)s)")
+                        help="azimuths of the tilt axis in the board plane: 0 tilts the top edge toward the sensor, 90 the "
+                             "right edge, 180 the bottom edge, 270 the left edge (default %(default)s)")
     parser.add_argument("--lateral-fill", type=float, default=d.lateral_fill,
                         help="fraction of the half field covered by board centers at each standoff (default %(default)s)")
     parser.add_argument("--lateral-positions", type=int, nargs=2, default=d.lateral_positions, metavar=("NX", "NY"),

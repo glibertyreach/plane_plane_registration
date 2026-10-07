@@ -201,7 +201,7 @@ distinguished; one hue per standoff, legend present).
 
 Inputs: `--manifest PATH` (made by `make_manifest` from 4 or more hand-jogged board
 captures), `--out PATH` (JSON), registration thresholds as options, and
-`--target-offset-mm D` (0 for a logged board tool frame, the plate thickness D when the
+`--target-offset-mm D` (0 for a logged board tool frame, the flange-face-to-front-face distance D when the
 flange pose was logged; it reaches `PipelineParameters.target_offset_mm`). Runs
 `measure_all` without a prediction, `register_measurements` (rigid), prints a table
 (pose, method, pixels, plane RMS, normal residual, offset residual) and the

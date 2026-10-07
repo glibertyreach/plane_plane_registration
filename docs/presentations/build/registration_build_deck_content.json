@@ -62,16 +62,10 @@
       "1",
       "none needed",
       "yes"
-     ],
-     [
-      "Rigid sensor mount",
-      "1",
-      "existing drawing",
-      "yes"
      ]
     ]
    },
-   "caption": "Nothing new if stage 1 was run. Section 1b of the procedure; each item is listed with its specification and drawing so it can be made for this procedure alone.",
+   "caption": "Nothing new if stage 1 was run. Section 1b of the procedure; the rigid sensor mount is in hand from the existing drawing (1a). Each item carries its specification and drawing so it can be made for this procedure alone.",
    "notes": "This is the complete list of apparatus the session needs beyond the sensor, the robot and the computers, as section 1b of the procedure gives it. Every item was built for the stage-1 calibration session and is reused as it is: the same board, the same adapter, the same run-out fixture, the same sensor mount. If stage 1 has not been run, the items are built to the stage-1 specification and drawing, which the procedure carries: the plate specification in section 1d, the run-out fixture in 1e, and drawing SC1-05 for the board adapter in appendix D, copied from the stage-1 repository. The rigid sensor mount is built from the existing drawing from previous work and is not drawn again."
   },
   {
@@ -120,7 +114,7 @@
     ]
    },
    "caption": "A phone camera is enough for the setup photos. Already in hand: sensor, robot, capture computer with its communication software, analysis computer.",
-   "notes": "These are the measuring tools and consumables of section 1c of the procedure. All of the tools were bought for stage 1; only consumables are new. The calipers measure the flange-to-face distance D and the board size that go in the pose log; the straightedge and a 0.05 mm feeler leaf check the board's flatness after painting and after mounting; the square sets the board's x axis when the tool frame is defined; the thermometer gives the room temperature for the session notes. No micrometers are needed, since there are no spheres to measure. The sensor, the robot, the capture computer with its communication software and the analysis computer are already in hand (section 1a)."
+   "notes": "These are the measuring tools and consumables of section 1c of the procedure. All of the tools were bought for stage 1; only consumables are new. The calipers measure the flange-to-face distance D, which sets the tool frame and goes in the session notes, and the board half-sizes, which go in the pose log; the straightedge and a 0.05 mm feeler leaf check the board's flatness after painting and after mounting; the square sets the board's x axis when the tool frame is defined; the thermometer gives the room temperature for the session notes. No micrometers are needed, since there are no spheres to measure. The sensor, the robot, the capture computer with its communication software and the analysis computer are already in hand (section 1a)."
   },
   {
    "id": "cost",
@@ -228,7 +222,7 @@
      ],
      [
       "Calipers, straightedge, feeler gauges",
-      "Mitutoyo or Starrett; DIN 874 grade 0 straightedge",
+      "Mitutoyo or Starrett; DIN 874 grade 0 or better straightedge",
       "Transcat, MSI-Viking, McMaster-Carr"
      ],
      [
@@ -257,7 +251,7 @@
     },
     {
      "head": "Steel base plate",
-     "text": "About 150 x 100 x 12 mm, bolted to the cell table with two M8 screws, so the base holds on any table and does not creep"
+     "text": "About 150 x 100 x 12 mm, bolted to the cell table with two M8 screws, so the base holds on a non-magnetic table and does not creep"
     },
     {
      "head": "Placement",
@@ -293,7 +287,7 @@
      "text": "Three support pads, three edge pins and three clamp fingers hold the board square to the flange axis, centered on it, and in the same place after a remount"
     }
    ],
-   "notes": "The adapter is the one machined part. Its three lapped pads define the board plane, its three edge pins locate the board within that plane, and its three clamp fingers hold the board against the pads without bending it, so that a remount puts the board back in the same place. The plane of the pads must be parallel to the adapter's back face, which sits on the robot flange; that is what the run-out check verifies after mounting. Drawing SC1-05 in appendix D of the procedure gives every dimension and tolerance; the drawing is generated in the stage-1 repository and copied here. The figure is figure 1b of the procedure."
+   "notes": "The adapter is the one part that needs a drawing. Its three lapped pads define the board plane, its three edge pins locate the board within that plane, and its three clamp fingers hold the board against the pads without bending it, so that a remount puts the board back in the same place. The plane of the pads must be parallel to the adapter's back face, which sits on the robot flange; that is what the run-out check verifies after mounting. Drawing SC1-05 in appendix D of the procedure gives every dimension and tolerance; the drawing is generated in the stage-1 repository and copied here. The figure is figure 1b of the procedure."
   },
   {
    "id": "acceptance",

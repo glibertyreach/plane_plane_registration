@@ -197,8 +197,8 @@ def build_parser() -> argparse.ArgumentParser:
                         help="warn when the board mask comes this close to the image border (default %(default)s)")
     parser.add_argument("--target-offset-mm", type=float, default=d.target_offset_mm,
                         help="distance from the logged frame's origin to the board's front face along its +z, in mm; "
-                             "0 when the logged frame is the board tool frame, the plate thickness D when the "
-                             "flange pose was logged (default %(default)s)")
+                             "0 when the logged frame is the board tool frame, the flange-face-to-front-face distance D "
+                             "of the procedure when the flange pose was logged (default %(default)s)")
     parser.add_argument("--min-pose-count", type=int, default=d.minimum_pose_count,
                         help="fewest segmented poses the registration may use (default %(default)s)")
     parser.add_argument("--min-normal-spread", type=float, default=d.minimum_normal_spread,
