@@ -1,0 +1,314 @@
+{
+ "slides": [
+  {
+   "id": "title",
+   "layout": "title_dark",
+   "section": "Introduction",
+   "title": "Sensor Registration: Procurement and Build",
+   "subtitle": "The board, its adapter and the fixtures needed for the registration captures",
+   "footer": "Procurement and mechanical build  ·  October 2026",
+   "notes": "This is the first of two decks on the registration captures, the session that gathers the sample set for registering the 3D sensor to the robot from plane-to-plane correspondences. It covers what has to exist before a capture session: the flat board, its adapter on the robot flange, the run-out fixture and the measuring tools, with estimated costs and candidate suppliers. Almost all of it is the stage-1 calibration hardware reused; the deck says what to check rather than what to make, and carries the specifications so that the items can be made if stage 1 has not been run. The second deck covers the test procedure itself and what the robot program must do. Both summarize the registration capture procedure in docs/procedures of the plane_plane_registration repository, whose section 1 and appendices A and D hold the full details."
+  },
+  {
+   "id": "fixtures",
+   "layout": "title_only",
+   "section": "Introduction",
+   "title": "One flat board carries the known geometry",
+   "image": "assets/mounting_b_front.png",
+   "caption": "The board's front face as the sensor sees it: the tool frame at the center, the four places where D is measured, and the three-point mounting behind it.",
+   "cards": [
+    {
+     "head": "Board",
+     "text": "200 x 150 mm plate, at least 6 mm thick, matte light gray, flat to 0.05 mm after painting and mounting"
+    },
+    {
+     "head": "Board adapter",
+     "text": "Doweled plate on the ISO flange; three support pads, three edge pins, three clamp fingers hold the board square to the flange axis"
+    },
+    {
+     "head": "Tool frame",
+     "text": "Origin at the center of the front face, z along the board normal toward the sensor, x along the long edge; the robot reports this frame"
+    }
+   ],
+   "notes": "Registration needs only one target: a flat board whose plane the sensor can measure and whose pose the robot reports. The sensor fits a plane to the board in each capture; the robot's reported tool frame gives the same plane in the robot's base frame; the transform that maps one set of planes onto the other is the registration. No spheres and no three-ball nest are needed, which is why this deck is short. The board, its adapter and its tool frame are the stage-1 ones (procedure section 1a and section 3, figure 1). The front face is what matters: its flatness, its matte finish and the perpendicularity of its mounting on the flange axis."
+  },
+  {
+   "id": "build_list",
+   "layout": "title_only",
+   "section": "Scope of work",
+   "title": "What must be built: nothing new if stage 1 was run",
+   "table": {
+    "header": [
+     "Item",
+     "Quantity",
+     "Drawing",
+     "From stage 1"
+    ],
+    "rows": [
+     [
+      "Flat target (board)",
+      "1",
+      "SC1-05 (outline)",
+      "yes"
+     ],
+     [
+      "Board adapter: flange plate with pads, edge pins and clamp fingers",
+      "1",
+      "SC1-05",
+      "yes"
+     ],
+     [
+      "Run-out fixture: dial indicator on a magnetic base and steel base plate",
+      "1",
+      "none needed",
+      "yes"
+     ],
+     [
+      "Rigid sensor mount",
+      "1",
+      "existing drawing",
+      "yes"
+     ]
+    ]
+   },
+   "caption": "Section 1b of the procedure. Each item is listed with its specification and drawing so it can be made for this procedure alone.",
+   "notes": "This is the complete list of apparatus the session needs beyond the sensor, the robot and the computers, as section 1b of the procedure gives it. Every item was built for the stage-1 calibration session and is reused as it is: the same board, the same adapter, the same run-out fixture, the same sensor mount. If stage 1 has not been run, the items are built to the stage-1 specification and drawing, which the procedure carries: the plate specification in section 1d, the run-out fixture in 1e, and drawing SC1-05 for the board adapter in appendix D, copied from the stage-1 repository. The rigid sensor mount is built from the existing drawing from previous work and is not drawn again."
+  },
+  {
+   "id": "buy_list",
+   "layout": "title_only",
+   "section": "Scope of work",
+   "title": "What must be bought",
+   "table": {
+    "header": [
+     "Item",
+     "Purpose",
+     "Estimated cost (USD)",
+     "From stage 1"
+    ],
+    "rows": [
+     [
+      "Calipers with depth rod, 150 mm",
+      "Board distance D; board size",
+      "$30 to $150",
+      "yes"
+     ],
+     [
+      "Straightedge 300 mm and feeler gauges",
+      "Board flatness after painting and mounting",
+      "$75 to $240",
+      "yes"
+     ],
+     [
+      "Thermometer",
+      "Room temperature in the session notes",
+      "$15 to $40",
+      "yes"
+     ],
+     [
+      "Machinist's square",
+      "Board x axis against the adapter",
+      "$30 to $80",
+      "yes"
+     ],
+     [
+      "Consumables",
+      "Isopropyl alcohol and wipes, shim stock",
+      "$20 to $60",
+      "no"
+     ]
+    ]
+   },
+   "caption": "A phone camera is enough for the setup photos. Already in hand: sensor, robot, capture computer with its communication software, analysis computer.",
+   "notes": "These are the measuring tools and consumables of section 1c of the procedure. All of the tools were bought for stage 1; only consumables are new. The calipers measure the flange-to-face distance D and the board size that go in the pose log; the straightedge and a 0.05 mm feeler leaf check the board's flatness after painting and after mounting; the square sets the board's x axis when the tool frame is defined; the thermometer gives the room temperature for the session notes. No micrometers are needed, since there are no spheres to measure. The sensor, the robot, the capture computer with its communication software and the analysis computer are already in hand (section 1a)."
+  },
+  {
+   "id": "cost",
+   "layout": "title_only",
+   "section": "Scope of work",
+   "title": "New spending is $20 to $60 when stage 1 has been run",
+   "table": {
+    "header": [
+     "Item to build",
+     "Estimated cost (USD)"
+    ],
+    "rows": [
+     [
+      "Flat target (board)",
+      "$50 to $400"
+     ],
+     [
+      "Board adapter",
+      "$250 to $600"
+     ],
+     [
+      "Run-out fixture: dial indicator, magnetic base, steel base plate",
+      "$240 to $570"
+     ],
+     [
+      "Rigid sensor mount",
+      "not estimated"
+     ]
+    ]
+   },
+   "stats": [
+    {
+     "value": "$20 to $60",
+     "label": "new spending, everything else in hand from stage 1"
+    },
+    {
+     "value": "$710 to $2,140",
+     "label": "built from nothing: $540 to $1,570 to build, $170 to $570 to buy"
+    }
+   ],
+   "caption": "Estimates of October 2026 from the stage-1 procedure, plus or minus 50 percent; the board adapter is the least certain figure.",
+   "notes": "The cost figures are the stage-1 procedure's, kept in one script (docs/procedures/build/costs.py) from which the procedure's section 1c and this slide are both filled, so they cannot disagree. They come from suppliers' list prices where these exist and from typical United States job-shop rates of about 80 to 150 dollars an hour otherwise. If the stage-1 session has been run, the board, the adapter, the run-out fixture and the tools exist, and the only new spending is consumables. Built from nothing, the three items come to 540 to 1,570 dollars and the tools to 170 to 570 dollars. Treat every figure as plus or minus 50 percent and get quotes; the board adapter, a one-off machined plate with lapped pads, is the least certain."
+  },
+  {
+   "id": "plate_spec",
+   "layout": "title_only",
+   "section": "Procurement",
+   "title": "Purchase specification: flat plate",
+   "table": {
+    "header": [
+     "Requirement",
+     "Flat plate (board)"
+    ],
+    "rows": [
+     [
+      "Size",
+      "200 x 150 mm, at least 6 mm thick"
+     ],
+     [
+      "Material",
+      "Finish-ground aluminum tooling plate (for example MIC-6) or float glass"
+     ],
+     [
+      "Flatness",
+      "0.05 mm over the front face, checked with a straightedge and a 0.05 mm feeler leaf after painting and after mounting"
+     ],
+     [
+      "Front face",
+      "Thin, even matte light-gray paint; do not bead-blast a plate thinner than about 10 mm"
+     ],
+     [
+      "Edges",
+      "Bottom long edge and left short edge square and clean: they rest on the adapter's edge pins"
+     ],
+     [
+      "Documents",
+      "Supplier's flatness report, kept with the session notes"
+     ]
+    ]
+   },
+   "caption": "Procedure section 1d; the board outline is on drawing SC1-05.",
+   "notes": "This is the purchase specification of section 1d of the procedure, identical to the stage-1 plate, to hand to a supplier or a grinding shop. The board is checked flat after painting and after mounting because that is the state the sensor sees. Thickness is not a stiffness matter: a 6 mm plate sags only about 0.002 mm under its own weight; the plate only has to survive the finish and the mounting flat. Bead-blasting is ruled out below about 10 mm because peening one face bows the plate; a thin, even matte paint over the ground or glass surface is the finish. The two reference edges rest against the adapter's edge pins, so they must be square and clean."
+  },
+  {
+   "id": "suppliers",
+   "layout": "title_only",
+   "section": "Procurement",
+   "title": "Candidate suppliers",
+   "table": {
+    "header": [
+     "Item",
+     "Candidate suppliers",
+     "Notes"
+    ],
+    "rows": [
+     [
+      "Board plate",
+      "McMaster-Carr MIC-6 plus a grinding shop; Edmund Optics float glass; a small granite surface plate",
+      "Painted matte after grinding; flatness checked after mounting"
+     ],
+     [
+      "Dial indicator and magnetic base",
+      "Mitutoyo 2046 series; Noga MG71003 or DG-61003",
+      "For the run-out fixture; McMaster-Carr and the usual tool suppliers"
+     ],
+     [
+      "Calipers, straightedge, feeler gauges",
+      "Mitutoyo or Starrett; DIN 874 grade 0 straightedge",
+      "Transcat, MSI-Viking, McMaster-Carr"
+     ],
+     [
+      "Board adapter and run-out base plate",
+      "Local machine shop",
+      "Drawing SC1-05; the base plate is a plain drilled plate"
+     ]
+    ]
+   },
+   "caption": "From suppliers' web pages, October 2026; not an endorsement. Confirm flatness, finish and price before ordering.",
+   "notes": "This is appendix A of the procedure in brief, the stage-1 supplier list reduced to the items this procedure uses. MIC-6 tooling plate is sold with a stated flatness of about 0.13 mm, coarser than the 0.05 mm asked for, so the plate is ordered oversize and finish-ground by a local shop; float glass is flat enough as delivered and is the better choice where no grinding shop is at hand; a small granite surface plate works if its front is painted and the robot carries the weight. The instruments are stock items. The adapter is a one-off job for a machine shop, built to drawing SC1-05."
+  },
+  {
+   "id": "runout",
+   "layout": "title_only",
+   "section": "Procurement",
+   "title": "Run-out fixture: dial indicator and its mounting",
+   "cards": [
+    {
+     "head": "Dial indicator",
+     "text": "0.01 mm graduation, about 10 mm travel; for example Mitutoyo 2046 series, about $50 to $150"
+    },
+    {
+     "head": "Magnetic base",
+     "text": "Articulating, with fine adjustment; for example Noga MG71003 or DG-61003, about $140 to $320"
+    },
+    {
+     "head": "Steel base plate",
+     "text": "About 150 x 100 x 12 mm, bolted to the cell table with two M8 screws, so the base holds on any table and does not creep"
+    },
+    {
+     "head": "Placement",
+     "text": "Where the indicator tip reaches the board's front face about 20 mm from an edge with the robot in its run-out pose"
+    }
+   ],
+   "image": "assets/mounting_a_side.png",
+   "caption": "The run-out check: joint 6 turns the flange, the indicator stays still, the reading must stay within 0.05 mm.",
+   "notes": "The run-out check in deck 2 needs the dial indicator held still while the robot turns the board about the flange axis; it tests whether the board face is perpendicular to that axis, which the tool frame's z axis assumes. A magnetic base alone can creep on a non-magnetic table, so the fixture stands on a steel plate bolted down. The stage-1 fixture serves as it is; section 1e of the procedure gives the parts and their placement. The figure is figure 1a of the procedure: the flange, the adapter and the board in section, with the indicator tip on the front face."
+  },
+  {
+   "id": "board_build",
+   "layout": "title_only",
+   "section": "Mechanical build",
+   "title": "The board must stay flat after finishing and mounting",
+   "image": "assets/mounting_b_front.png",
+   "caption": "The front face: tool frame axes, the path of the indicator tip, the four D places, and the adapter's pads, pins and clamp behind the board.",
+   "cards": [
+    {
+     "head": "Plate",
+     "text": "200 x 150 mm, at least 6 mm thick; ground aluminum tooling plate or float glass"
+    },
+    {
+     "head": "Finish",
+     "text": "Matte light gray paint on the front face; do not bead-blast a plate thinner than about 10 mm, it bows"
+    },
+    {
+     "head": "Flatness",
+     "text": "0.05 mm, checked after painting and mounting, not before; keep the flatness report"
+    },
+    {
+     "head": "Adapter",
+     "text": "Three support pads, three edge pins and three clamp fingers hold the board square to the flange axis, centered on it, and in the same place after a remount"
+    }
+   ],
+   "notes": "The adapter is the one machined part. Its three lapped pads define the board plane, its three edge pins locate the board within that plane, and its three clamp fingers hold the board against the pads without bending it, so that a remount puts the board back in the same place. The plane of the pads must be parallel to the adapter's back face, which sits on the robot flange; that is what the run-out check verifies after mounting. Drawing SC1-05 in appendix D of the procedure gives every dimension and tolerance; the drawing is generated in the stage-1 repository and copied here. The figure is figure 1b of the procedure."
+  },
+  {
+   "id": "acceptance",
+   "layout": "title_only",
+   "section": "Mechanical build",
+   "title": "Checks before the board goes to the robot cell",
+   "checklist": [
+    "Board adapter made to drawing SC1-05, flange interface confirmed against the robot's flange drawing",
+    "Board flat to 0.05 mm after painting and after mounting on the adapter; flatness report kept",
+    "Front face matte, uniform and free of highlights; reference edges square and clean",
+    "Board and adapter weighed for the tool load data",
+    "Run-out fixture's base plate bolted to the cell table where the indicator reaches the board",
+    "Dowels seated; the board goes back in the same place after a remount"
+   ],
+   "notes": "These are the build and preparation checks of sections 1 and 3 of the procedure, gathered in one place. Each protects something the software cannot repair later: a board that is not flat gives plane residuals the registration reads as sensor error; a glossy spot returns a highlight and a bad read; a loose or unseated adapter shifts the board between poses and spoils every pose after it; wrong tool load data shifts every reported pose. The run-out and D measurements themselves are session steps, in deck 2."
+  }
+ ]
+}

@@ -1,0 +1,438 @@
+{
+ "slides": [
+  {
+   "id": "title",
+   "layout": "title_dark",
+   "section": "Introduction",
+   "title": "Sensor Registration: Test Procedure and Robot Program",
+   "subtitle": "Running the two capture runs and what the robot program must do",
+   "footer": "Test procedure  ·  October 2026",
+   "notes": "This is the second of two decks on the registration captures. The first covers what must exist before the session. This one covers the session itself: the board's tool frame, the rough sensor location, the pose plan, the two sub-procedures that drive the robot to the same poses in two different ways, how poses are recorded, the checks, and what to hand over. It follows sections 2 to 10 of the registration capture procedure in docs/procedures of the plane_plane_registration repository, which gives every step in full."
+  },
+  {
+   "id": "product",
+   "layout": "title_only",
+   "section": "Introduction",
+   "title": "The session produces two capture sets and an exact log of poses",
+   "stats": [
+    {
+     "value": "235",
+     "label": "robot poses, visited twice, 5 frames each"
+    },
+    {
+     "value": "~3 h",
+     "label": "with setup and checks; about 80 minutes of robot time"
+    },
+    {
+     "value": "2,350",
+     "label": "capture files, about 25 GB"
+    }
+   ],
+   "message": "If the pose log is wrong, the registration is wrong.",
+   "body": "Every capture file must be matched to exactly where the robot had put the board. The two capture sets come from one plan, driven straight to each pose and then via a standardized approach, so that the effect of gear backlash can be measured.",
+   "notes": "The output of a session is two folders of sensor capture files, one group per robot pose, each with a manifest that records for every file where the robot reported the board. The registration software fits the sensor-to-robot transform from each folder. The two folders come from the same list of poses driven in two ways: sub-procedure A moves straight to each pose, sub-procedure B approaches every pose with the same final move so that backlash is taken up the same way each time; comparing the two tells whether backlash matters. The counts are for the default plan on a 640 x 480 sensor (section 5); the plan tool prints the exact ones. The purpose of this first session is to learn whether the robot's pose errors or the sensor's plane errors dominate, and to set the thresholds of the tools from real residuals; a larger run of 1,000 poses or more is planned only if the analysis calls for it."
+  },
+  {
+   "id": "flow",
+   "layout": "title_only",
+   "section": "Introduction",
+   "title": "The session at a glance",
+   "steps": [
+    {
+     "n": 1,
+     "head": "Prepare",
+     "text": "Warm up the sensor 30 min; fix exposure, gain and SGM parameters"
+    },
+    {
+     "n": 2,
+     "head": "Board frame",
+     "text": "Mount the board; run-out check; measure D; set TOOL_BOARD"
+    },
+    {
+     "n": 3,
+     "head": "Locate sensor",
+     "text": "Six hand-jogged captures give a rough sensor position"
+    },
+    {
+     "n": 4,
+     "head": "Plan poses",
+     "text": "The plan tool writes poses.csv, a summary and a picture"
+    },
+    {
+     "n": 5,
+     "head": "Capture A",
+     "text": "Straight to each pose; manifest and check"
+    },
+    {
+     "n": 6,
+     "head": "Capture B",
+     "text": "Via the approach pose; manifest and check"
+    },
+    {
+     "n": 7,
+     "head": "Hand over",
+     "text": "Folders, pose logs, manifests, checks, notes, photos"
+    }
+   ],
+   "notes": "These are the seven stages of a session, in order; sections 2 to 9 of the procedure correspond to them. Steps 1 to 4 are setup and happen once. Steps 5 and 6 each run over the whole plan, and each ends with the manifest and the quick check before the other starts, while the board is still mounted and flagged poses are cheap to re-capture. The sensor and the board are not touched between the two runs; moving either makes everything after it a new session. The software commands are listed in one table in section 2 of the procedure, with the section that explains each."
+  },
+  {
+   "id": "prep",
+   "layout": "title_only",
+   "section": "Introduction",
+   "title": "Preparation before the first session",
+   "columns": [
+    {
+     "head": "Robot",
+     "icon": "robot",
+     "points": [
+      "Check the documented absolute accuracy: 0.1 mm or better",
+      "Weigh the board with its adapter; enter its tool load data",
+      "Write the robot program; note where it writes the pose logs",
+      "Dry-run every pose at reduced speed, in both sub-procedures",
+      "Safety review of the new program"
+     ]
+    },
+    {
+     "head": "Sensor and computers",
+     "icon": "camera",
+     "points": [
+      "Capture software set for the trigger and the <pose_id>_Index<nn> file names",
+      "Exposure, gain and SGM parameters set and recorded: smoothing filters off, installation patch size",
+      "At least 25 GB free for the default plan",
+      "Both software packages installed and self-tested"
+     ]
+    },
+    {
+     "head": "Cell",
+     "icon": "layout",
+     "points": [
+      "Layout study: board centers 550 to 950 mm from the sensor, tilted up to 30 degrees, inside the robot's reach",
+      "Run-out base plate bolted to the table",
+      "Robot base frame identified and recorded"
+     ]
+    }
+   ],
+   "message": "The board, the adapter and the tools themselves are in the procurement and build deck, and in section 1 of the procedure.",
+   "notes": "This is section 1f of the procedure: everything to prepare before the first session, beyond the hardware. The robot's absolute accuracy is taken from the maker's specification sheet; repeatability alone is not enough, because every pose is used as a known position. Tool load data matter because a wrong mass or center of gravity shifts every reported pose. The dry run covers both sub-procedures, including the 40 mm approach retreat of B, so that no pose collides with the sensor or its cables. The sensor settings are the stage-1 ones: the same depth sensor with its SGM parameters recorded, smoothing filters off and the installation patch size. The disk figure is 10 GB per 1,000 frames for about 2,350 frames."
+  },
+  {
+   "id": "board",
+   "layout": "title_only",
+   "section": "Setup",
+   "title": "The board's tool frame sits on its front face",
+   "image": "assets/mounting_a_side.png",
+   "points": [
+    "Run-out: turn joint 6 through 360 degrees; the dial indicator stays within 0.05 mm",
+    "Measure the flange-to-face distance D at four places; they agree within 0.05 mm",
+    "Tool frame: origin at the face center, z out of the face toward the sensor, x along the long edge",
+    "A few degrees of error in x is harmless; an error in z is not",
+    "Save as TOOL_BOARD with its load data; record D, the run-out and the board size"
+   ],
+   "notes": "The board's pose is reported by the robot, not fitted, so its frame must be right: the registration takes the reported frame's z axis as the board normal and its origin as a point on the front face. The run-out check tests whether the board face is perpendicular to the flange axis; if the reading wanders, the adapter is shimmed. D is the distance from the flange face to the front face, measured at four places; the tool frame is defined at (0, 0, D) from the flange. An error in x only rotates the frame within the board plane, which the registration does not use; an error in z tilts the normal and shows as a residual on every pose. If the controller cannot define a tool frame, the flange pose is logged instead and the tools are given D with the target-offset option (procedure section 3)."
+  },
+  {
+   "id": "bootstrap",
+   "layout": "title_only",
+   "section": "Setup",
+   "title": "Six captures locate the sensor well enough to plan",
+   "boot": [
+    {
+     "id": "boot01",
+     "text": "About 600 mm in front, near the picture center, facing the sensor squarely"
+    },
+    {
+     "id": "boot02",
+     "text": "Tilted about 20 degrees, top edge toward the sensor"
+    },
+    {
+     "id": "boot03",
+     "text": "Tilted about 20 degrees, bottom edge toward the sensor"
+    },
+    {
+     "id": "boot04",
+     "text": "Tilted about 20 degrees, left edge toward the sensor"
+    },
+    {
+     "id": "boot05",
+     "text": "Tilted about 20 degrees, right edge toward the sensor"
+    },
+    {
+     "id": "boot06",
+     "text": "About 250 mm farther away, facing squarely"
+    }
+   ],
+   "points": [
+    "Log the robot's reported tool pose for each; one capture per pose",
+    "The bootstrap tool finds the board in each capture and registers the six poses",
+    "Residuals of a fraction of a degree and a millimeter or two are fine; several degrees or tens of millimeters mean a copying error or a wrong tool frame"
+   ],
+   "notes": "The software determines the sensor's exact position from the full capture set; this step only needs a rough position so that the planned poses land inside the field of view and so that the software knows where to look for the board in each capture. Six hand-jogged poses, tilted in four directions and at two distances, are enough; the bootstrap also reports the normal spread of the six, which must reach 0.05 and is about 0.15 with these tilts. The result, boot.json, is read by the plan tool and the check tool. Procedure section 4 gives the steps and the commands; the words it uses for what the software reports, segmentation, plane residual, normal and offset residual, are defined there with figure 2."
+  },
+  {
+   "id": "plan",
+   "layout": "title_only",
+   "section": "Capture",
+   "title": "The plan spreads 235 poses through the volume",
+   "image": "assets/plan_example.png",
+   "stats": [
+    {
+     "value": "3",
+     "label": "standoffs: 550, 750 and 950 mm"
+    },
+    {
+     "value": "9",
+     "label": "orientations per position: facing, and tilted 15 and 30 degrees toward four edges"
+    },
+    {
+     "value": "3 x 3",
+     "label": "grid of positions over half the field at each standoff"
+    }
+   ],
+   "caption": "About 20 percent of poses are held out to test the fit; they are captured like all the others. Tilted boards that would leave the field are dropped automatically.",
+   "notes": "The plan tool writes poses.csv, a summary, and the picture shown here, which plots the planned board centers in the sensor's frame: a side view on the left and a front view on the right, with the field of view drawn; one color per standoff, held-out poses outlined. Each pose is described by its standoff, tilt and azimuth, which section 5 of the procedure defines. The summary reports how many poses were planned, dropped and kept at each standoff and tilt, the normal spread of the set, and the registration error to expect if the sensor's planes are good to 0.2 degrees and 0.2 mm. Every row of poses.csv carries the target pose in three orientation forms and the approach pose for sub-procedure B; section 5 lists the columns."
+  },
+  {
+   "id": "robot_program",
+   "layout": "title_only",
+   "section": "Capture",
+   "title": "What the robot program must do",
+   "columns": [
+    {
+     "head": "Inputs",
+     "icon": "input",
+     "points": [
+      "poses.csv from the plan tool: base-frame position and orientation of every target pose, as a matrix, a quaternion and a rotation vector, plus the approach pose in the same forms",
+      "The tool frame TOOL_BOARD"
+     ]
+    },
+    {
+     "head": "Behavior",
+     "icon": "cogs",
+     "points": [
+      "Sub-procedure A: one joint move straight to the target",
+      "Sub-procedure B: joint move to the approach pose, then the same linear final move onto every target",
+      "Settle 1.5 seconds; same speed settings in both; never change the base frame"
+     ]
+    },
+    {
+     "head": "Outputs",
+     "icon": "output",
+     "points": [
+      "Trigger five frames per pose through the communication software, named <pose_id>_Index00 to _Index04",
+      "Append the REPORTED tool pose and, if available, the joint angles to pose_log_A.csv or pose_log_B.csv; note where the files are written"
+     ]
+    }
+   ],
+   "message": "Once the robot model and controller are settled, the robot program can be written with Claude Code.",
+   "notes": "The robot program is small: it reads the plan, moves, waits, triggers the sensor, and logs what the robot reports. Its interface is fixed by the files on either side: poses.csv coming in (section 5 of the procedure), the trigger through the capture computer's communication software, and the pose log going out (section 7). The one thing it must never do is log the commanded pose instead of the reported one. For sub-procedure B it also logs the joint angles at the approach pose when the controller reports them, so that the check tool can confirm that each joint's final motion had the same direction at every pose. Both sub-procedures are in section 6."
+  },
+  {
+   "id": "loop",
+   "layout": "title_only",
+   "section": "Capture",
+   "title": "Sub-procedure A: straight to every pose",
+   "steps": [
+    {
+     "n": 1,
+     "head": "Move",
+     "text": "One joint move to the target pose, from wherever the robot is"
+    },
+    {
+     "n": 2,
+     "head": "Settle",
+     "text": "Wait 1.5 seconds for vibration to die out"
+    },
+    {
+     "n": 3,
+     "head": "Capture",
+     "text": "Five frames through the communication software: <pose_id>_Index00 to _Index04, into captures_A/"
+    },
+    {
+     "n": 4,
+     "head": "Log",
+     "text": "Read the REPORTED tool pose and the joint angles; append them to pose_log_A.csv"
+    }
+   ],
+   "stats": [
+    {
+     "value": "~8 s",
+     "label": "per pose"
+    },
+    {
+     "value": "~30 min",
+     "label": "robot time for 235 poses"
+    }
+   ],
+   "message": "Then build the manifest and run the check before starting B. Do all of A, then all of B; never move the sensor or remount the board between them.",
+   "notes": "Sub-procedure A ignores backlash: the robot goes to each pose by whatever path the controller chooses, so each joint arrives from a different direction at different poses and the dead band of its gears is taken up differently each time. Whatever scatter that produces appears in the residuals of this set. The approach columns of poses.csv are not used. When the last pose is done, the manifest of captures_A is built and the quick check run while the board is still mounted, so that flagged poses can be re-captured cheaply (procedure sections 6 to 8). The time per pose is a rough figure, not a measurement."
+  },
+  {
+   "id": "approach",
+   "layout": "title_only",
+   "section": "Capture",
+   "title": "Sub-procedure B: the same final move onto every pose",
+   "image": "assets/approach_b.png",
+   "steps": [
+    {
+     "n": 1,
+     "text": "Joint move to the approach pose: the target moved back 40 mm along the board normal and turned 3 degrees about its long edge"
+    },
+    {
+     "n": 2,
+     "text": "Wait 0.5 seconds"
+    },
+    {
+     "n": 3,
+     "text": "Linear move onto the target at the same speed every time, without stopping or reversing; use the exact-stop mode if the controller has one"
+    },
+    {
+     "n": 4,
+     "text": "Settle 1.5 seconds; capture five frames into captures_B/"
+    },
+    {
+     "n": 5,
+     "text": "Log the REPORTED tool pose and the joint angles at the target and, if available, at the approach pose"
+    }
+   ],
+   "notes": "Gear backlash lets the flange sit on either side of a small dead band after a move, depending on which way each joint last moved. Approaching every target with the same final move makes the last motion of each joint the same at every pose, as far as the geometry allows, so the dead band is taken up the same way each time and its effect is constant instead of random. A constant offset is absorbed into the registered transform; a random one shows as scatter. Comparing set B with set A therefore separates the two. The approach pose is in every row of poses.csv. The joint angles at the approach pose let the check tool report, per joint, the fraction of poses whose final motion had the majority direction. The figure is the right panel of figure 4 of the procedure, with the approach rotation exaggerated."
+  },
+  {
+   "id": "manifest",
+   "layout": "title_only",
+   "section": "Capture",
+   "title": "Poses are recorded in a pose log, one line per pose",
+   "columns": [
+    {
+     "head": "What the log holds",
+     "points": [
+      "The pose id from poses.csv, which also starts the file names",
+      "The board half-sizes",
+      "The REPORTED tool position in the base frame",
+      "The orientation in the controller's own form, named by its rotation type",
+      "The joint angles at the target and, in B, at the approach pose"
+     ]
+    },
+    {
+     "head": "Rotation forms the tools accept",
+     "points": [
+      "quaternion_wxyz (ABB) or quaternion_xyzw",
+      "euler_zyx_deg: KUKA A, B, C",
+      "fixed_xyz_deg: FANUC W, P, R",
+      "rotvec_deg: Universal Robots, converted from radians to degrees",
+      "matrix: nine numbers, row by row",
+      "make_manifest converts them all and names every file or pose that does not match"
+     ]
+    }
+   ],
+   "example": "b_z0650_t24_a090_05,board,,100.0,75.0,850.11,-12.70,470.55,euler_zyx_deg,-91.3,19.8,0.4,,",
+   "notes": "The capture software writes the sensor data; the robot's pose is recorded separately by the robot program, in a CSV file with one header line and one line per pose. Section 7 of the procedure lists the columns and the rotation types with their controller examples; naming the form wrongly makes every pose disagree with the solution, which the check reports. After each sub-procedure, make_manifest matches every file to its pose id, converts the orientation to the standard matrix form, and complains by name about any pose without files, any file without a pose and any missing size. Writing the pose into the file header as well is an optional cross-check; it does not replace the log. The example line is one pose; the joint-angle columns follow it in the file."
+  },
+  {
+   "id": "residuals",
+   "layout": "title_only",
+   "section": "Checks",
+   "title": "Two numbers are reported for every pose",
+   "image": "assets/residuals.png",
+   "points": [
+    "The software finds the board in each capture and fits a plane to it: the plane residual says how flat the board read",
+    "From the logged robot pose and the sensor's position it predicts where the board plane should be",
+    "Normal residual: the angle between predicted and measured plane, in degrees",
+    "Offset residual: the distance between them at the board's center, in millimeters",
+    "A pose logged wrongly stands out by a large residual; one tilt direction off means the tool frame's z axis is wrong"
+   ],
+   "notes": "These two residuals are how every tool in the procedure reports agreement between the robot and the sensor: the bootstrap for the six hand-jogged poses, the check for each capture set against its own registration, and the analysis maps afterwards. The predicted plane comes from the logged robot pose and the current sensor-to-robot transform; the measured plane from the sensor's points. Once the transform has been solved from all the poses, each pose's residuals say how well it agrees with the solution. Section 4 of the procedure defines the words and shows this figure as figure 2."
+  },
+  {
+   "id": "checks",
+   "layout": "title_only",
+   "section": "Checks",
+   "title": "Check each capture set before the other run starts",
+   "cards": [
+    {
+     "head": "Board not found or cut off",
+     "flag": "segmentation failed; valid fraction below 50 percent; mask at the border",
+     "text": "Pose copied wrongly, something flat closer than the board, the board outside the field, or exposure"
+    },
+    {
+     "head": "Plane residual",
+     "flag": "above 1 mm",
+     "text": "The board did not read flat: a shiny spot, a dirty board, or an exposure problem"
+    },
+    {
+     "head": "Normal or offset residual",
+     "flag": "above 1 degree or 1 mm",
+     "text": "One pose: copied wrongly. Every pose of one tilt direction: tool frame z axis or a misnamed rotation type. Growing across the volume: base frame or robot accuracy"
+    },
+    {
+     "head": "Joint sign consistency",
+     "flag": "far below 100 percent (B only)",
+     "text": "The approach move did not standardize that joint's backlash over part of the workspace; tell the engineer"
+    }
+   ],
+   "caption": "Re-capture a flagged pose under a new id, for example b_z0650_t24_a090_05r; never delete lines from the log. Exit code 0 means nothing flagged.",
+   "notes": "The check tool prints one line per pose and a verdict, and writes a JSON report; its exit code is 0 when nothing is flagged, 1 when something is, and 2 when it cannot read the manifest. It runs on each folder as soon as its captures are complete, while the robot and the board are still set up, because that is when a flagged pose can be re-captured. It also reports the normal spread of the set, which should not fall below 0.05 with the plan's defaults. Section 8 of the procedure lists every flag and what it means. The thresholds are placeholders until the first real session sets them."
+  },
+  {
+   "id": "spoilers",
+   "layout": "title_only",
+   "section": "Wrap-up",
+   "title": "Seven things that spoil a session",
+   "items": [
+    {
+     "icon": "move",
+     "text": "Moving or bumping the sensor: everything after it is a new session, both sub-procedures repeated"
+    },
+    {
+     "icon": "sliders",
+     "text": "Changing exposure, gain, the base frame, the speed settings or the backlash compensation mid-session or between the runs"
+    },
+    {
+     "icon": "edit",
+     "text": "Logging the commanded pose instead of the reported pose"
+    },
+    {
+     "icon": "tool",
+     "text": "A loose adapter: check the dowels and the run-out before each run"
+    },
+    {
+     "icon": "hand",
+     "text": "Fingerprints or gloss on the board: wipe with isopropyl alcohol"
+    },
+    {
+     "icon": "eye",
+     "text": "Something flat and large closer to the sensor than the board: keep the foreground clear"
+    },
+    {
+     "icon": "swap",
+     "text": "In B, stopping or reversing on the final move, or skipping the approach pose; or capturing B into the A folder"
+    }
+   ],
+   "notes": "These are the failures that cannot be repaired afterwards in software. The first two change the sensor or the robot mid-session, which invalidates the comparison between the two runs. A commanded pose in the log hides exactly the robot error the session is meant to measure. The foreground matters because the software, when it has no better information, takes the closest large flat surface to be the board. The last item defeats sub-procedure B: every pose must get the same final move, and the two folders must not be mixed. Section 10 of the procedure gives the full list."
+  },
+  {
+   "id": "deliverables",
+   "layout": "title_only",
+   "section": "Wrap-up",
+   "title": "What to hand over at the end of the session",
+   "checklist": [
+    "captures_A/ and captures_B/ with every .mc file, named <pose_id>_Index<nn>.mc",
+    "pose_log_A.csv and pose_log_B.csv, with the joint-angle columns when the controller reports them",
+    "captures_A/manifest.csv and captures_B/manifest.csv, built without errors",
+    "captures_A/check.json and captures_B/check.json with no flags, or a note on each",
+    "plan/ files as used, boot.json, boot_pose_log.csv and the bootstrap captures",
+    "session_notes.txt: sensor serial, warm-up, exposure, gain and SGM parameters, pose log location, base frame, backlash setting, board D and run-out, TOOL_BOARD, temperature, speed settings, run order and times",
+    "Photos (a phone camera is fine) of the sensor mount, the board on the flange, and the workspace as the sensor sees it"
+   ],
+   "software": {
+    "head": "Software",
+    "points": [
+     "plan_poses, bootstrap and check_captures in planereg.capture; make_manifest in sphcal.cli",
+     "Install and self-test: procedure appendix C",
+     "Every tool prints its options with --help; appendix B quotes them"
+    ]
+   },
+   "notes": "The checklist is section 9 of the procedure. The session notes matter as much as the data: the analysis needs D, the tool frame values and the backlash compensation setting, and the notes are the only record of the order the runs were made in and of anything unusual. The four software tools are summarized in one table in section 2 of the procedure, with the section that gives each full command; appendix B quotes their help output and appendix C says how to install them."
+  }
+ ]
+}

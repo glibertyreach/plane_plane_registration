@@ -30,7 +30,17 @@ intrinsics.
   technician's step-by-step procedure for the captures, modeled on the stage-1
   capture procedure of the sibling repository
   `depth_calibration_from_spherical_target`, whose `sphcal` package this one
-  depends on for reading capture files and building manifests.
+  depends on for reading capture files and building manifests. Section 1 is the
+  scope of work (in hand from stage 1, to build, to buy, purchase specification,
+  run-out fixture, preparation); appendix A lists suppliers, B the tools' help,
+  C the installation, D the board-adapter drawing SC1-05, a copy of the stage-1
+  drawing kept in `docs/procedures/drawings/`. Cost figures come from one script,
+  `docs/procedures/build/costs.py`.
+- `docs/presentations/`: two decks built from content files by the generator in
+  `build/` (see its README): procurement and mechanical build, and the test
+  procedure and robot program.
+- `docs/session_records/`: compacted chat records of the sessions in which this
+  work was done.
 
 ## Building and testing
 
@@ -56,6 +66,6 @@ builds the Word file (pandoc via `pypandoc_binary`).
 
 ## History
 
-This material was developed on the branch `claude/elegant-bell-yt0be6` of the
-repository `flexible_plane_fit` (commits 6054e7b to 9a535ad) and moved here as
-one commit; that branch keeps the full development history.
+This material was developed in the repository `flexible_plane_fit` (commits
+6054e7b to 9a535ad) and moved here as one commit. That history is kept there under
+the tag `registration-work-origin`; the branch it was developed on has been deleted.

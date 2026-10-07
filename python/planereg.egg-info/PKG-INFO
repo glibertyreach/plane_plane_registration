@@ -1,0 +1,12 @@
+Metadata-Version: 2.4
+Name: planereg
+Version: 0.1.0
+Summary: Gathering and analysis of the sample set that tests sensor-to-robot registration from plane-plane correspondences
+Requires-Python: >=3.10
+Requires-Dist: numpy>=1.26
+Requires-Dist: scipy>=1.11
+Requires-Dist: sphcal>=0.1.0
+Provides-Extra: figures
+Requires-Dist: matplotlib>=3.8; extra == "figures"
+Provides-Extra: test
+Requires-Dist: pytest>=8.0; extra == "test"
