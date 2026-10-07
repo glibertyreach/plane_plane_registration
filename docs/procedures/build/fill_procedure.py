@@ -2,7 +2,8 @@
 so that the document never quotes stale help text or plan numbers.
 
 Replaces the markers {{PLAN_HELP}}, {{BOOTSTRAP_HELP}}, {{CHECK_HELP}} and {{MANIFEST_HELP}}
-with the tools' --help output (the last one from sphcal's make_manifest), and {{PLAN_PARAGRAPH}} with the counts and predicted errors of a plan run
+with the tools' --help output (the last one from sphcal's make_manifest), {{COST_TABLE_BUILD}},
+{{COST_TABLE_BUY}} and {{COST_PARAGRAPH}} with the tables of costs.py, and {{PLAN_PARAGRAPH}} with the counts and predicted errors of a plan run
 with the default settings on the indicative 640 x 480 sensor and a nominal sensor position;
 also writes figures/fig_plan_example.png from that run. The source of truth is the
 template registration_capture_procedure.template.md; this script writes the .md next to it.
@@ -22,6 +23,9 @@ import tempfile
 import textwrap
 
 import numpy as np
+
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
+import costs    # noqa: E402  (the single source of the cost figures; same folder)
 
 HERE = pathlib.Path(__file__).resolve().parent
 PROCEDURES = HERE.parent
@@ -138,6 +142,9 @@ def main() -> int:
         "{{BOOTSTRAP_HELP}}": tool_help("bootstrap"),
         "{{CHECK_HELP}}": tool_help("check_captures"),
         "{{MANIFEST_HELP}}": module_help(MANIFEST_MODULE),
+        "{{COST_TABLE_BUILD}}": costs.build_table(),
+        "{{COST_TABLE_BUY}}": costs.buy_table(),
+        "{{COST_PARAGRAPH}}": costs.cost_paragraph(),
         "{{PLAN_PARAGRAPH}}": plan_paragraph(summary),
     }
     for marker, value in replacements.items():

@@ -5,7 +5,7 @@ record the captures. No knowledge of the registration math is needed. Two people
 referred to throughout: the technician (you), who sets up the board, programs the
 robot and records the captures; and the engineer, who runs the analysis and answers
 questions about the setup. Where a step says "run", a computer with Python and this
-repository is needed (appendix B says how to set it up); the engineer can run those
+repository is needed (appendix C says how to set it up); the engineer can run those
 steps for you if you send the files.
 
 What you are producing: two folders of sensor capture files (`.mc`), one group of
@@ -20,10 +20,12 @@ registration is wrong, so most of this procedure is about getting the table righ
 This procedure follows the stage-1 calibration capture procedure of the depth
 calibration project (repository `depth_calibration_from_spherical_target`, file
 `docs/procedures/stage1_capture_procedure.docx`; "the stage-1 procedure" below) in
-its layout and its tools; the board, its adapter and its tool frame are the same
-(section 1 repeats the board specification). A stage-1 board can be used as it is.
-The spheres and the three-ball nest are not needed here. You do not need to have read the stage-1 procedure; where this
-document points to it, it is for extra detail only.
+its layout and its tools. The board, its adapter, its tool frame and the run-out
+fixture are the stage-1 ones, reused; section 1 lists them, and carries their
+specification, drawing and suppliers so that they can be made if the stage-1 session
+has not been run. The spheres and the three-ball nest are not needed here. You do
+not need to have read the stage-1 procedure; where this document points to it, it is
+for extra detail only.
 
 Terminology: in this project "registration" means finding the transform between the
 sensor and the robot (the extrinsic parameters); "calibration" means finding the
@@ -36,20 +38,112 @@ ways of driving to a pose.
 
 ---
 
-## 1. Equipment
+## 1. Scope of work and equipment
 
-| Item | Requirement | Notes |
-|---|---|---|
-| Sensor | The 3D sensor to be registered, rigidly mounted; it must not move during the whole session | Mount on a stiff bracket, not a tripod; mark its position so a bump is noticed |
-| Robot | Six-axis industrial robot, absolute positioning accuracy 0.1 mm or better over the working volume, with a 50 mm or larger ISO flange | A robot calibrated by its maker ("absolute accuracy" option) is needed; repeatability alone is not enough |
-| Board | Flat plate 200 mm x 150 mm, at least 6 mm thick, front face matte and light gray, flat to 0.05 mm after finishing | Ground aluminum tooling plate or float glass, matte-painted; ask the supplier for a flatness report (stage-1 procedure, appendix A, lists suppliers). Thickness is not a stiffness matter (a 6 mm plate sags about 0.002 mm under its own weight); it only has to survive the finish and the mounting flat. Do not bead-blast a plate thinner than about 10 mm: peening one face bows it. Paint over the ground or glass surface instead, and check the flatness after painting and mounting, not before |
-| Board adapter | Plate that bolts to the flange with the dowel pins and holds the board with its front face perpendicular to the flange axis and its center on the flange axis | Three-point mounting (two dowels and a clamp) so the board goes back in the same place |
-| Dial indicator with magnetic base | 0.01 mm resolution | Board runout check |
-| Depth gauge or calipers | 0.02 mm resolution | Board offset D |
-| Capture computer | Runs the sensor's capture software and writes one `.mc` file per capture; the files must be named by pose id (section 2 says how) | At least 10 GB free per 1,000 frames |
+This section is the complete list of what must exist before the first session: what
+is already in hand, what must be built, what must be bought, and what must be
+prepared. Nothing outside this list is needed. The board, its adapter and the run-out
+fixture come from the stage-1 session; 1b to 1e say what they are, so that they can
+be made for this procedure alone if stage 1 has not been run. Appendix D holds the
+shop drawing; appendix A lists suppliers.
 
-Appendix A lists the software tools used in sections 4 to 8 and their options;
-appendix B says how to install them.
+### 1a. Already in hand
+
+| Item | Requirement |
+|---|---|
+| Sensor | The 3D sensor to be registered: the same depth sensor as in stage 1, with the same processing settings (1f) |
+| Robot | Six-axis industrial robot with an ISO 9409-1-50-4-M6 tool flange; its documented absolute positioning accuracy must be 0.1 mm or better over the working volume (check the maker's specification sheet; repeatability alone is not enough) |
+| Capture computer and software | Runs the sensor's capture and communication software, which accepts the capture trigger from the robot program and writes one `.mc` file per capture, named by pose id (section 2); at least 10 GB free per 1,000 frames, about 25 GB for the default plan |
+| Analysis computer | Any computer with Python 3.10 or later and the two software packages installed, their self-test passed (appendix C) |
+| Flat target (board) | From stage 1: 200 x 150 mm plate, at least 6 mm thick, matte light-gray front face flat to 0.05 mm; specification in 1d |
+| Board adapter | From stage 1: plate on the ISO flange with three support pads, three edge pins and three clamp fingers, holding the board square to the flange axis and centered on it; drawing SC1-05 (appendix D) |
+| Run-out fixture | From stage 1: dial indicator on a magnetic base on a steel plate bolted to the cell table; section 1e |
+| Rigid sensor mount | From stage 1, built from the existing drawing from previous work: a stiff bracket, not a tripod, with the sensor's position marked so a bump is noticed |
+
+### 1b. What must be built
+
+Nothing, if the stage-1 session has been run: the three items below exist. Otherwise
+they are built as in the stage-1 procedure, to the same drawing and specification.
+
+{{COST_TABLE_BUILD}}
+
+The rigid sensor mount is built from the existing drawing from previous work and is
+not estimated here.
+
+### 1c. What must be bought
+
+{{COST_TABLE_BUY}}
+
+{{COST_PARAGRAPH}}
+
+### 1d. Purchase specification for the flat plate
+
+| Requirement | Flat plate (board) |
+|---|---|
+| Size | 200 x 150 mm, at least 6 mm thick |
+| Material | Ground aluminum tooling plate (for example MIC-6, finish-ground) or float glass |
+| Flatness | 0.05 mm over the front face, checked with the straightedge and a 0.05 mm feeler leaf after painting and after mounting on the board adapter |
+| Front face | Matte light-gray paint, thin and even; do not bead-blast a plate thinner than about 10 mm, since peening one face bows it. Thickness is not a stiffness matter (a 6 mm plate sags about 0.002 mm under its own weight); it only has to survive the finish and the mounting flat |
+| Edges | Square and clean on the bottom long edge and the left short edge, which rest against the board adapter's edge pins |
+| Documents | Supplier's flatness report, kept with the session notes |
+
+### 1e. Run-out fixture: dial indicator and its mounting
+
+The run-out check of section 3 needs the dial indicator held still while the robot
+turns the board (figure 1). Use a dial indicator with 0.01 mm graduation and about
+10 mm travel (for example Mitutoyo 2046 series, about $50 to $150) on an articulating
+magnetic base with fine adjustment (for example Noga MG71003 or DG-61003, about $140
+to $320). Stand the magnetic base on a steel base plate about 150 x 100 x 12 mm bolted
+to the cell table with two M8 screws, so the base holds on a non-magnetic table and
+does not creep. Place the plate where the indicator tip reaches the board's front
+face about 20 mm from an edge with the robot in its run-out pose. McMaster-Carr and
+the usual tool suppliers stock all three items. The stage-1 fixture serves as it is.
+
+### 1f. Preparation before the first session
+
+Robot:
+
+- Check the robot's documented absolute-accuracy specification: 0.1 mm or better
+  over the working volume.
+- Weigh the board with its adapter and enter its tool load data (mass and center of
+  gravity) in the controller; wrong load data shifts every pose.
+- Write the robot program to the interface of sections 6 and 7: it reads
+  `plan/poses.csv`, drives each pose in the way its sub-procedure requires, triggers
+  the captures through the capture computer's communication software, and writes
+  `pose_log_A.csv` and `pose_log_B.csv`. Note where the program writes the pose logs
+  (controller storage or a network location) so they can be collected after the
+  session. Once the robot model and controller are settled, the program can be
+  written with Claude Code.
+- Dry-run every planned pose at reduced speed, without capturing, in both
+  sub-procedures: the straight moves of A and the approach-then-final moves of B. Each
+  pose must be reachable and must clear the sensor, its mount and its cables.
+- Review the new program under the cell's safety rules.
+
+Sensor and computers:
+
+- Set up the capture software for the robot's trigger and the `<pose_id>_Index<nn>`
+  file names (section 2); writing the robot pose into the file header is optional
+  (section 7).
+- Choose and record the production exposure and gain, and the SGM (semi-global
+  matching) parameters: all smoothing filters off, and the patch size the same as in
+  installations. These are the stage-1 settings.
+- Free at least 25 GB on the capture computer: the default plan is about 2,350
+  frames, at 10 GB per 1,000 frames.
+- Install the two software packages on the analysis computer and pass the self-test
+  (appendix C).
+
+Cell:
+
+- Layout study: place the sensor so that board centers at 550 to 950 mm from it, over
+  half of its field of view and tilted up to 30 degrees in four directions (section
+  5), lie inside the robot's reach, and so that the 40 mm approach retreat of
+  sub-procedure B stays clear of the sensor; do this before the sensor mount is
+  fixed.
+- Bolt the run-out base plate to the cell table (two M8) where section 1e says.
+- Identify and record the robot base frame used for the session.
+
+Appendix B lists the software tools used in sections 4 to 8 and their options;
+appendix C says how to install them.
 
 ## 2. Before anything else
 
@@ -89,8 +183,10 @@ be matched to a pose and is left out.
 the first capture, and leave it running for the whole session. Note the time it was
 switched on.
 
-Fix the sensor's exposure and gain to the values that will be used in production.
-Write them down. Do not use automatic exposure.
+Fix the sensor's exposure and gain to the values that will be used in production,
+and set the SGM (semi-global matching) parameters as in stage 1: all smoothing filters
+off, and the patch size the same as in installations. Write them down. Do not use
+automatic exposure.
 
 Switch off or block any sunlight or lamps that fall on the board. Room light is fine
 if it is constant.
@@ -104,21 +200,22 @@ is in production, and write down what it is set to. Do not change it between the
 sub-procedures of section 6.
 
 **Session notes.** Record in a text file (`session_notes.txt`): date, sensor serial
-number, exposure and gain, robot model and controller software version, the active
-base frame name, the backlash compensation setting, the board certificate (flatness),
-room temperature, and anything unusual.
+number, exposure, gain and SGM parameters, robot model and controller software
+version, the active base frame name, where the robot program writes the pose logs,
+the backlash compensation setting, the board certificate (flatness), room
+temperature, and anything unusual.
 
-**Software.** Before the first command of section 4, do appendix B once on the
+**Software.** Before the first command of section 4, do appendix C once on the
 computer that will run the tools: install the two packages and run the self-test.
 Every command in this document is then typed in a terminal opened in the session
-folder, with the environment of appendix B.4 active (the prompt starts with
+folder, with the environment of appendix C.4 active (the prompt starts with
 `(.venv)`). The table below is the whole of what gets run, in order; each row points
 to the section that gives the full command and explains its output. Any row can be
 run by the engineer instead, if you send the files it reads.
 
 | When | Command | Reads | Writes | Section |
 |---|---|---|---|---|
-| Once, before section 4 | install and self-test | the two repositories | the environment `.venv` | appendix B |
+| Once, before section 4 | install and self-test | the two repositories | the environment `.venv` | appendix C |
 | After the six boot captures | `sphcal.cli.make_manifest` | `boot_pose_log.csv`, `boot/` | `boot/manifest.csv` | 4, step 4 |
 | Right after that | `planereg.capture.bootstrap` | `boot/manifest.csv` | `boot.json` (rough sensor position) | 4, step 4 |
 | Before programming the robot | `planereg.capture.plan_poses` | `boot.json`, one boot capture | `plan/poses.csv`, `plan_summary.txt`, `plan.png` | 5 |
@@ -329,13 +426,14 @@ section 7 (the pose log) before writing the robot program: the program has to wr
 that file.
 
 **Triggering the captures.** Each robot program outline below has a step "trigger
-the capture of 5 frames". How this is done depends on the capture software: by a
-digital output of the robot wired to the capture computer, by a network command, or
-by the operator pressing a key when the robot program shows a prompt and waits.
-Any of the three is fine; what matters is that the capture is taken after the
-settling wait, before the robot moves on, and that the file-name prefix for the
-captures of that pose is the pose id (section 2). If the operator triggers by hand,
-the program should wait for a confirmation before moving on.
+the capture of 5 frames". The robot program sends that trigger through the capture
+computer's communication software, the same path as in stage 1 (section 1f). The
+capture is taken after the settling wait and before the robot moves on, and the
+file-name prefix for the captures of that pose is the pose id (section 2). The
+program is written before the first session (section 1f), once the robot model and
+controller are settled; it can be written with Claude Code, because both sides of
+its interface are fixed: `poses.csv` coming in (section 5), the trigger, and the pose
+log going out (section 7).
 
 ![approach](figures/fig_approach.png)
 
@@ -348,8 +446,8 @@ onto the target at every pose. (The approach rotation is exaggerated in the draw
 
 1. Move to the target pose with one joint move, from wherever the robot is.
 2. Wait 1.5 seconds for vibration to settle.
-3. Trigger the capture of 5 frames; file names `<pose_id>_Index00.mc` to
-   `<pose_id>_Index04.mc`, in the folder `captures_A/`.
+3. Trigger the capture of 5 frames through the communication software; file names
+   `<pose_id>_Index00.mc` to `<pose_id>_Index04.mc`, in the folder `captures_A/`.
 4. Read the robot's actual reported tool pose (not the commanded one, the reported
    one) and, if the controller gives them, the six joint angles; append them to the
    pose log `pose_log_A.csv` (section 7).
@@ -376,7 +474,8 @@ every pose. Robot program outline, for each row:
    stop" positioning mode for the end of a move, use it here and in sub-procedure A
    alike.
 4. Wait 1.5 seconds for vibration to settle.
-5. Trigger the capture of 5 frames; file names as above, in the folder `captures_B/`.
+5. Trigger the capture of 5 frames through the communication software; file names
+   as above, in the folder `captures_B/`.
 6. Read the reported tool pose and, if available, the joint angles at the target,
    and append them to `pose_log_B.csv`; if the controller can also report the joint
    angles at the approach pose, log those in the `approach_j1..approach_j6` columns.
@@ -524,8 +623,9 @@ it cannot read the manifest.
   explaining each remaining flag
 - `plan/poses.csv`, `plan/plan_summary.txt`, `plan/plan.png` as used
 - `boot.json`, `boot_pose_log.csv` and the bootstrap captures in `boot/`
-- `session_notes.txt` with: sensor serial, warm-up time, exposure and gain, base
-  frame name, backlash compensation setting, board D and runout reading, whether the
+- `session_notes.txt` with: sensor serial, warm-up time, exposure, gain and SGM
+  parameters, where the pose logs were written, base frame name, backlash
+  compensation setting, board D and runout reading, whether the
   flange pose was logged instead of TOOL_BOARD (section 3), board dimensions and
   certificate, TOOL_BOARD values, temperature, robot speed and acceleration
   settings, the order the sub-procedures were run in and their times
@@ -551,7 +651,44 @@ it cannot read the manifest.
   final move.
 - Mixing up the two pose logs, or capturing B into the A folder.
 
-## Appendix A. Software reference
+## Appendix A. Suppliers
+
+This list was assembled from the suppliers' web pages in October 2026, for the
+stage-1 procedure, and is repeated here for the items this procedure uses. It is a
+starting point, not an endorsement: confirm the flatness, the finish and the price
+with the supplier before ordering, because catalogs change.
+
+Board:
+
+- McMaster-Carr: MIC-6 cast aluminum tooling plate, sold with mill certificates and
+  a stated flatness (about 0.13 mm over the sheet for the thicknesses of interest).
+  That is coarser than the 0.05 mm asked for here, so order the plate oversize and
+  have a local grinding shop finish-grind the front face flat to 0.05 mm, then
+  matte-paint it (bead-blast only a plate 10 mm or thicker; peening one face of a
+  thinner plate bows it). Alternatively, ask the grinding shop for a flatness report
+  directly.
+- Any float-glass or optical-flat supplier (Edmund Optics sells ground and polished
+  flats): a 6 to 10 mm float glass plate is flat to better than 0.05 mm over 200 mm
+  as delivered; it must be matte-painted on the front face and bonded or clamped to
+  the board adapter. Glass is the better choice when no grinding shop is at hand.
+- A small granite surface plate (Starrett or Mitutoyo, grade A or AA) is flat to a
+  few micrometers but black and heavy; it works if the front is painted matte light
+  gray and the robot carries the weight (a 200 x 150 x 50 mm plate is about 4 kg).
+
+Measuring instruments (section 1c), all stocked by McMaster-Carr, Transcat,
+MSI-Viking and the usual tool suppliers:
+
+- Dial indicator: Mitutoyo 2046 series, 0.01 mm graduation, 10 mm travel, about $50
+  to $150.
+- Magnetic base: Noga MG71003 or DG-61003 with fine adjustment, about $140 to $320.
+- Calipers with depth rod, 150 mm: Mitutoyo or Starrett, about $30 to $150.
+- Straightedge: 300 mm, DIN 874 grade 0 or better, about $60 to $200; feeler gauge
+  set with a 0.05 mm leaf.
+
+Machine shop: the board adapter and the run-out base plate (drawing SC1-05 in
+appendix D for the adapter; the base plate is a plain drilled plate, section 1e).
+
+## Appendix B. Software reference
 
 The tools live in this repository under `python/planereg/` (the `capture` package)
 and use the sibling repository `depth_calibration_from_spherical_target` (the `sphcal`
@@ -566,24 +703,24 @@ its help with `--help`.
 
 {{MANIFEST_HELP}}
 
-## Appendix B. Installing and running the software, step by step
+## Appendix C. Installing and running the software, step by step
 
 These steps follow appendix C of the stage-1 procedure; the only difference is that
 two repositories are installed, `sphcal` first and `planereg` second. Allow about 20
 minutes. Nothing here needs administrator rights.
 
-B.1 Install Python 3.10 or newer (stage-1 procedure, appendix C.1).
+C.1 Install Python 3.10 or newer (stage-1 procedure, appendix C.1).
 
-B.2 Get the code: unzip the two archives the engineer sent, or clone the two
+C.2 Get the code: unzip the two archives the engineer sent, or clone the two
 repositories, side by side, somewhere without spaces in the path, for example
 `C:\cal\depth_calibration` and `C:\cal\plane_plane_registration` on Windows or
 `~/cal/depth_calibration` and `~/cal/plane_plane_registration` on Linux.
 
-B.3 Open a terminal in `plane_plane_registration/python` (stage-1 procedure,
+C.3 Open a terminal in `plane_plane_registration/python` (stage-1 procedure,
 appendix C.3). Check with `dir` (Windows) or `ls` (Linux) that `pyproject.toml` is
 listed.
 
-B.4 Make a private Python environment and install both packages into it:
+C.4 Make a private Python environment and install both packages into it:
 
 ```
 python3 -m venv .venv
@@ -595,7 +732,7 @@ python3 -m pip install -e ".[figures,test]"
 
 The prompt now starts with `(.venv)`; activate it again in every new terminal.
 
-B.5 Run the self-test, still in `plane_plane_registration/python`:
+C.5 Run the self-test, still in `plane_plane_registration/python`:
 
 ```
 python3 -m pytest -q tests/test_capture_tools.py
@@ -605,7 +742,7 @@ It must end with a line like `N passed in 20s`. Any line containing `FAILED` or
 `ERROR` means the installation is not right; copy the whole output into a text file
 and send it to the engineer. Do not start capturing until this passes.
 
-B.6 Run the tools as `python3 -m planereg.capture.<tool>` (and
+C.6 Run the tools as `python3 -m planereg.capture.<tool>` (and
 `python3 -m sphcal.cli.make_manifest`) followed by their options, as in sections 4
 to 8. With the environment active this works from any folder, so open the terminal
 in the session folder of section 2 and give file names relative to it, as the
@@ -614,6 +751,38 @@ stopped and wrote nothing; it says what is wrong and which pose or file it conce
 A message starting with `WARNING:` means the tool finished but something should be
 looked at.
 
-B.7 If something goes wrong: the stage-1 procedure's appendix C.7 applies unchanged
+C.7 If something goes wrong: the stage-1 procedure's appendix C.7 applies unchanged
 (`No module named sphcal` or `No module named planereg` means the environment is not
 active or the install step was skipped).
+
+## Appendix D. Shop drawing
+
+One drawing applies to this procedure: SC1-05, the board adapter, from the stage-1
+procedure. It shows a plan view and an elevation in section, with every feature
+dimensioned and toleranced, the material, the finish and the quantity. Its flange
+interface follows ISO 9409-1-50-4-M6 (ISO 9409-1:1996, table 1: 50 mm pitch circle,
+31.5 mm H7 centering recess, four M6, one 6 mm H7 pin hole on the pitch circle at
++Xm); confirm it against the chosen robot's flange drawing before machining. The
+rigid sensor mount is built from the existing drawing from previous work and is not
+repeated here. The run-out fixture needs no drawing (section 1e).
+
+The drawing is generated by a script in the stage-1 repository
+(`depth_calibration_from_spherical_target`, folder `docs/procedures/drawings/`;
+regenerate with `python3 docs/procedures/drawings/make_all.py` there). The copy in
+this repository, `docs/procedures/drawings/SC1-05_board_adapter.png`, is that output
+and prints at full size; it is the copy to send to the shop. When the stage-1
+drawing changes, copy the regenerated file here.
+
+| Drawing | Part | Quantity | File |
+|---|---|---|---|
+| SC1-05 | Board adapter, with the board outline | 1 | `drawings/SC1-05_board_adapter.png` |
+
+Points for the machine shop to confirm: the pin and pad positions carry the general
+tolerance ISO 2768-mK, which is enough because the board's position within its own
+plane does not affect the registration; the flange-face-to-board-face distance D is
+a formula of the board thickness, so the measured D of section 3 is what the robot
+uses, not the drawing's nominal.
+
+![SC1-05](drawings/SC1-05_board_adapter.png)
+
+Drawing SC1-05. Board adapter.
