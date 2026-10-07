@@ -1203,6 +1203,9 @@ async function buildDeck(contentJson, outputPptx) {
 		columnsWithMessage(slide, s, { sizes: COLUMNS_MESSAGE, bulletPt: r.bulletPt, paraSpacePt: r.paraSpacePt, messageH: r.messageH, boxFill: C.background2, boxLine: C.accent1, boxIcon: "robot", boxIconFill: C.accent1 });
 	};
 
+	// The orienting slide (what is tested and why) uses the same three-column-plus-message layout as prep.
+	builders.purpose = (slide, s) => builders.prep(slide, s);
+
 	builders.prep = (slide, s) => {
 		title(slide, s.title);
 		const r = PREP;

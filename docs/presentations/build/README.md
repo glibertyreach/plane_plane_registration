@@ -6,7 +6,7 @@ text and speaker notes) and the figure panels in `../assets/`:
 | Content file | Deck |
 |---|---|
 | `registration_build_deck_content.json` | `../registration_procurement_build.pptx` (10 slides) |
-| `registration_procedure_deck_content.json` | `../registration_test_procedure.pptx` (15 slides) |
+| `registration_procedure_deck_content.json` | `../registration_test_procedure.pptx` (16 slides) |
 
 Slides are built by the "id" field of each slide in the JSON; each id has one
 builder in the script (tables share one helper that sizes the rows to their text;

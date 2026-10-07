@@ -10,6 +10,45 @@
    "notes": "This is the second of two decks on the registration captures. The first covers what must exist before the session. This one covers the session itself: the board's tool frame, the rough sensor location, the pose plan, the two sub-procedures that drive the robot to the same poses in two different ways, how poses are recorded, the checks, and what to hand over. It follows sections 2 to 10 of the registration capture procedure in docs/procedures of the plane_plane_registration repository, which gives every step in full."
   },
   {
+   "id": "purpose",
+   "layout": "title_only",
+   "section": "Introduction",
+   "title": "What we are testing, and why",
+   "columns": [
+    {
+     "head": "The method",
+     "icon": "crosshairs",
+     "points": [
+      "Register a 3D sensor to the robot from plane-to-plane correspondences",
+      "One flat board on the flange, viewed at many poses; no 2D images, no spheres",
+      "The sensor measures the board plane; the robot reports where the board is; the transform that maps one onto the other is the registration"
+     ]
+    },
+    {
+     "head": "What is unproven",
+     "icon": "question",
+     "points": [
+      "Everything so far was verified on synthetic data",
+      "Whether the board is found and the planes fit cleanly on real captures",
+      "Whether the robot's pose errors or the sensor's plane errors dominate",
+      "How much gear backlash shifts the result"
+     ]
+    },
+    {
+     "head": "What the session answers",
+     "icon": "clipboardCheck",
+     "points": [
+      "The sensor-to-robot transform and its residuals on real data",
+      "Residual maps that point at the robot or at the sensor",
+      "Set A against set B: a constant backlash offset or random scatter",
+      "Real residuals to set the tools' thresholds, which are placeholders today"
+     ]
+    }
+   ],
+   "message": "A few hundred poses decide whether a run of 1,000 or more is needed; that second run is planned only from this one's analysis.",
+   "notes": "This slide orients the audience before the procedure: what is being tested and why the session is shaped the way it is. The method under test registers the sensor into the robot's base frame from plane-to-plane correspondences: the sensor fits a plane to the board in each capture, the robot's reported tool frame gives the same plane in the base frame, and the transform that maps the sensor's planes onto the robot's is the registration, solved in closed form. Its claimed advantage is that one flat target and no 2D images are needed. The solver and the tools were verified on synthetic sessions only. This first real session answers four questions: does the method recover the transform on real captures; which error dominates, the robot's pose accuracy or the sensor's plane measurement, which the residual maps of the analysis show; how much backlash matters, which is why the same poses are captured twice, straight (A) and via a standardized approach (B); and what the thresholds should be, since every gate in the tools is a placeholder until real residuals set it. The specification review in docs/registration_review and the procedure's introduction give the background."
+  },
+  {
    "id": "product",
    "layout": "title_only",
    "section": "Introduction",
