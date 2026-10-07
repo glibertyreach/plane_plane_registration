@@ -543,6 +543,7 @@ document where they differ.
 | 14 | (procedure) Sensor and its settings | The same depth sensor as stage 1, with the same processing settings recorded: SGM parameters, all smoothing filters off, the installation patch size. | Procedure sections 1f, 2 and 9. |
 | 15 | (procedure) Decks | Two decks as in stage 1: procurement and mechanical build; test procedure and robot program. | `docs/presentations/`. |
 | 16 | (procedure) Decision log | New decisions continue this table from row 11, rather than a separate analysis document. | This table. |
+| 17 | (procedure, 7 Oct 2026) Remount check | A remount is verified, not assumed: repeat the run-out and D checks, and re-capture a saved reference pose so the bootstrap shows the before-and-after residuals; limits 0.05 mm, 0.2 degrees and 0.2 mm as placeholders. | Procedure section 3 (remount check), with hooks in sections 4, 6, 9 and 10; both decks. |
 
 ---
 

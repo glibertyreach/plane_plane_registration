@@ -282,6 +282,35 @@ flange's z axis: add `--target-offset-mm D` (D in millimeters) to every bootstra
 check command in sections 4 and 8, and the engineer adds it to the analysis. Do not
 mix the two kinds of pose in one session.
 
+**Remount check.** The three-point mounting is meant to put the board back in the
+same place, but that is verified, not assumed. What a remount can change, and what
+it does to the registration: a tilt of the face relative to the flange axis shifts
+the normal of every pose; a change of D shifts every plane and is absorbed into the
+registered translation, where it goes unnoticed unless D is measured again; a shift
+or rotation of the board within its own plane changes nothing, because the plane is
+the same plane. After any remount of the board or the adapter, therefore:
+
+1. Repeat the run-out check (step 2) and the four D measurements (step 3). Accept
+   when the run-out stays within 0.05 mm and the mean D is within 0.05 mm of the
+   recorded value. If D has moved by more, find out why (a chip under a pad, an
+   unseated dowel) before going on; if the new value is right, update TOOL_BOARD and
+   write both values and the time in the session notes, because pose logs written
+   before and after refer to different frames otherwise.
+2. Repeat the reference capture: the first bootstrap pose of section 4, `boot01`, is
+   saved on the controller as a named position for this purpose. Drive to it again,
+   capture once as `boot01r` (or `boot01r2` for a second remount) with the same
+   logged pose, rebuild the boot manifest and run the bootstrap again (section 4,
+   step 4). The two rows `boot01` and `boot01r` were taken at the same robot pose,
+   so any difference between their normal and offset residuals is the remount. Accept
+   when they agree within 0.2 degrees and 0.2 mm, the plane-noise figures the plan
+   assumes (section 5); a difference of a degree or a millimeter means the board did
+   not go back. These limits are placeholders until the first session gives real
+   figures.
+3. Record the remount in the session notes: when, why, the run-out reading, the new
+   D, and the two residual rows. A remount between sub-procedures A and B must be
+   recorded in any case, because the comparison of the two folders assumes an
+   unchanged board.
+
 ## 4. Finding where the sensor is (rough)
 
 The software works out the exact position of the sensor from the captures. It only
@@ -327,7 +356,9 @@ send the first file to the engineer, to see which way is up.
    section 7 (read section 7 now: the file needs a header line, and one line per
    pose with the pose id `boot01`, the board half-sizes, the position and the
    orientation in the form your controller shows). The joint-angle columns are not
-   needed for these six poses.
+   needed for these six poses. Save this robot position on the controller under a
+   name such as `REF_BOARD`: it is the reference pose of the remount check (section
+   3), to be driven to again after any remount.
 3. Tilt the board about 20 degrees so that its top edge comes toward the sensor,
    keeping its center near the middle of the picture; capture `boot02` and log the
    pose. Then about 20 degrees the other way, bottom edge toward the sensor
@@ -568,7 +599,8 @@ check on it, as after A.
 
 Use the same speed and acceleration settings in both sub-procedures. Do all of A,
 then all of B (or the other way round); do not interleave, and do not move the
-sensor or remount the board between them. At about 8 seconds per pose in A and 12 in
+sensor or remount the board between them. If a remount cannot be avoided, do the
+remount check of section 3 and record it before the second run starts. At about 8 seconds per pose in A and 12 in
 B, the robot time for the default plan (section 5 gives the exact pose count) is
 about 80 minutes in all; plan on about three hours including the setup and the
 checks.
@@ -708,7 +740,8 @@ it cannot read the manifest.
   compensation setting, board D and runout reading, whether the
   flange pose was logged instead of TOOL_BOARD (section 3), board dimensions and
   certificate, TOOL_BOARD values, temperature, robot speed and acceleration
-  settings, the order the sub-procedures were run in and their times
+  settings, the order the sub-procedures were run in and their times, and any
+  remount with its check (section 3)
 - Photos of the setup: sensor mount, the board on the flange, the workspace behind
   the board as the sensor sees it
 
@@ -719,8 +752,9 @@ it cannot read the manifest.
 - Changing exposure, gain, the base frame, the speed settings, or the backlash
   compensation mid-session or between the sub-procedures.
 - Using the commanded pose instead of the reported pose in the log.
-- A loose adapter: check the dowels are seated and the runout (section 3, step 2)
-  before each sub-procedure.
+- A loose adapter, or a remount that did not go back: check the dowels are seated
+  and the runout (section 3, step 2) before each sub-procedure, and do the remount
+  check of section 3 after any remount.
 - Fingerprints or gloss on the board: wipe with isopropyl alcohol; a shiny spot
   returns a bright highlight and a bad read.
 - Something flat and large closer to the sensor than the board, in the picture. The

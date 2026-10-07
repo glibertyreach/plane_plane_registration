@@ -306,9 +306,9 @@
     "Front face matte, uniform and free of highlights; reference edges square and clean",
     "Board and adapter weighed for the tool load data",
     "Run-out fixture's base plate bolted to the cell table where the indicator reaches the board",
-    "Dowels seated; the board goes back in the same place after a remount"
+    "Dowels seated; after any remount, the remount check of the procedure (run-out, D, reference capture) passes"
    ],
-   "notes": "These are the build and preparation checks of sections 1 and 3 of the procedure, gathered in one place. Each protects something the software cannot repair later: a board that is not flat gives plane residuals the registration reads as sensor error; a glossy spot returns a highlight and a bad read; a loose or unseated adapter shifts the board between poses and spoils every pose after it; wrong tool load data shifts every reported pose. The run-out and D measurements themselves are session steps, in deck 2."
+   "notes": "These are the build and preparation checks of sections 1 and 3 of the procedure, gathered in one place. Each protects something the software cannot repair later: a board that is not flat gives plane residuals the registration reads as sensor error; a glossy spot returns a highlight and a bad read; a loose or unseated adapter shifts the board between poses and spoils every pose after it; wrong tool load data shifts every reported pose. The run-out and D measurements themselves are session steps, in deck 2. A remount is verified, not assumed: section 3 of the procedure repeats the run-out check and the D measurement and re-captures a saved reference pose, so that any change of the board's plane relative to the flange shows before it spoils a run."
   }
  ]
 }

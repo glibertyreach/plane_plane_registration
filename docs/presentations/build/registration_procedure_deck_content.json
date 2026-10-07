@@ -166,9 +166,10 @@
     "Measure the flange-to-face distance D at four places; they agree within 0.05 mm",
     "Tool frame: origin at the face center, z out of the face toward the sensor, x along the long edge",
     "A few degrees of error in x is harmless; an error in z is not",
-    "Save as TOOL_BOARD with its load data; record D, the run-out and the board size"
+    "Save as TOOL_BOARD with its load data; record D, the run-out and the board size",
+    "After any remount: run-out and D again, and the saved reference pose captured again (procedure section 3)"
    ],
-   "notes": "The board's pose is reported by the robot, not fitted, so its frame must be right: the registration takes the reported frame's z axis as the board normal and its origin as a point on the front face. The run-out check tests whether the board face is perpendicular to the flange axis; if the reading wanders, the adapter is shimmed. D is the distance from the flange face to the front face, measured at four places; the tool frame is defined at (0, 0, D) from the flange. An error in x only rotates the frame within the board plane, which the registration does not use; an error in z tilts the normal and shows as a residual on every pose. If the controller cannot define a tool frame, the flange pose is logged instead and the tools are given D with the target-offset option (procedure section 3)."
+   "notes": "The board's pose is reported by the robot, not fitted, so its frame must be right: the registration takes the reported frame's z axis as the board normal and its origin as a point on the front face. The run-out check tests whether the board face is perpendicular to the flange axis; if the reading wanders, the adapter is shimmed. D is the distance from the flange face to the front face, measured at four places; the tool frame is defined at (0, 0, D) from the flange. An error in x only rotates the frame within the board plane, which the registration does not use; an error in z tilts the normal and shows as a residual on every pose. If the controller cannot define a tool frame, the flange pose is logged instead and the tools are given D with the target-offset option (procedure section 3). A remount is verified, not assumed (section 3, remount check): the run-out and D measurements are repeated, and the first bootstrap pose, saved on the controller as a named position, is captured again so that the bootstrap shows the before-and-after residuals side by side. A tilt or a change of D matters; a shift within the board's own plane does not. A remount between the two sub-procedures is recorded, because their comparison assumes an unchanged board."
   },
   {
    "id": "bootstrap",
@@ -432,7 +433,7 @@
     },
     {
      "icon": "tool",
-     "text": "A loose adapter: check the dowels and the run-out before each run"
+     "text": "A loose adapter, or a remount that did not go back: do the remount check after any remount"
     },
     {
      "icon": "hand",
