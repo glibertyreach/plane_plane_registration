@@ -372,7 +372,7 @@ wrongly, the tool frame's z axis is wrong (section 3, step 5), or the board was 
 the closest flat surface in that capture. It also prints the "normal spread" of the
 six poses, a number between 0 and 0.58 that says how differently the board was
 tilted from pose to pose: it must be at least 0.05 (the tilts above give about
-0.15). `boot.json` is the rough sensor position; the next steps read it.
+0.2). `boot.json` is the rough sensor position; the next steps read it.
 
 ## 5. The pose plan
 

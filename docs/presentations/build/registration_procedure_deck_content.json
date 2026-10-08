@@ -207,7 +207,7 @@
     "The bootstrap tool finds the board in each capture and registers the six poses",
     "Residuals of a fraction of a degree and a millimeter or two are fine; several degrees or tens of millimeters mean a copying error or a wrong tool frame"
    ],
-   "notes": "The software determines the sensor's exact position from the full capture set; this step only needs a rough position so that the planned poses land inside the field of view and so that the software knows where to look for the board in each capture. Six hand-jogged poses, tilted in four directions and at two distances, are enough; the bootstrap also reports the normal spread of the six, which must reach 0.05 and is about 0.15 with these tilts. The result, boot.json, is read by the plan tool and the check tool. Procedure section 4 gives the steps and the commands; the words it uses for what the software reports, segmentation, plane residual, normal and offset residual, are defined there with figure 2."
+   "notes": "The software determines the sensor's exact position from the full capture set; this step only needs a rough position so that the planned poses land inside the field of view and so that the software knows where to look for the board in each capture. Six hand-jogged poses, tilted in four directions and at two distances, are enough; the bootstrap also reports the normal spread of the six, which must reach 0.05 and is about 0.2 with these tilts. The result, boot.json, is read by the plan tool and the check tool. Procedure section 4 gives the steps and the commands; the words it uses for what the software reports, segmentation, plane residual, normal and offset residual, are defined there with figure 2."
   },
   {
    "id": "plan",
