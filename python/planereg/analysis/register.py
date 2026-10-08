@@ -3,7 +3,8 @@ Registration of a capture session: the sensor-to-base transform from the board p
 
     python3 -m planereg.analysis.register --manifest manifest.json --out DIR
         [--sensor-in-base PATH] [--model rigid|similarity|both] [--outlier-rounds N]
-        [--target-offset-mm D] [--plan poses.csv] [--figures | --no-figures] [--truth truth.json]
+        [--target-offset-mm D] [--plan poses.csv] [--min-mask-pixels N] [--figures | --no-figures]
+        [--truth truth.json]
 
 Two passes (code design 8.1), both through the shared pipeline of ``planereg.core.pipeline``:
 
@@ -28,6 +29,13 @@ against the same four acceptance thresholds as the fit (maximum RMS and maximum 
 A manifest pose that the plan does not list (a re-capture whose id carries a suffix) is treated as not held out
 and fitted as usual; plan poses that were not captured are counted in a warning. Without --plan nothing is
 held out and the ``held_out`` section is null.
+
+Small board images (--min-mask-pixels). A pose whose segmented board has fewer pixels than the minimum (the same
+default and meaning as in the capture check) gives a noisy plane, and its residuals are poor for that reason
+alone. Such a pose is left out of every solve and out of the held-out evaluation, in both passes (each pass
+counts the pixels of its own segmentation). Its per-pose entry keeps the segmentation statistics and the
+residuals against the solved transform (for information), ``used`` false and ``excluded`` set to the reason;
+the pass block lists these poses as ``too_small_pose_ids``.
 
 Outputs in --out
     registration.json    parameters; per model and pass: transform (4 x 4, rotation, translation, scale),
@@ -56,7 +64,7 @@ from pathlib import Path
 
 import numpy as np
 
-from planereg.core.pipeline import (PipelineParameters, PoseMeasurement, evaluate_measurements, measure_all,
+from planereg.core.pipeline import (DEFAULT_MINIMUM_MASK_PIXELS, PipelineParameters, PoseMeasurement, evaluate_measurements, measure_all,
                                     register_measurements)
 from planereg.core.registration import (PoseResidual, RegistrationParameters, RegistrationResult,
                                         RegistrationStatus, TransformModel, residual_statistics,
@@ -100,6 +108,9 @@ PREDICTION_NONE = "none"
 PREDICTION_SENSOR_IN_BASE = "sensor_in_base"
 PREDICTION_PASS_ONE = "pass1_transform"
 """How a pass found the candidate region of each pose."""
+
+EXCLUDED_TOO_SMALL = "board image too small"
+"""Value of a pose entry's ``excluded`` field for a pose left out of the solve for its few mask pixels."""
 
 PLAN_POSE_ID_COLUMN = "pose_id"
 PLAN_HOLDOUT_COLUMN = "holdout"
@@ -174,6 +185,9 @@ class RegisterParameters:
     pipeline: PipelineParameters = field(default_factory=PipelineParameters)
     registration: RegistrationParameters = field(default_factory=RegistrationParameters)
     """Thresholds and outlier rejection; the transform model is set per model run."""
+    minimum_mask_pixels: int = DEFAULT_MINIMUM_MASK_PIXELS
+    """A segmented pose whose board image has fewer pixels than this is left out of every solve and of the
+    held-out evaluation (too small to give a reliable plane). Same default and meaning as in the capture check."""
 
 
 @dataclass
@@ -186,9 +200,11 @@ class PassRun:
     result: RegistrationResult
     pose_ids: list[str]                         # poses in the registration, in the order of result.residuals
     held_out_ids: frozenset[str] | None = None  # poses kept out of the solve; None when no plan was given
-    held_out_residuals: dict[str, PoseResidual] = field(default_factory=dict)
-    """Residuals of the held-out poses against the solved transform (those whose segmentation succeeded, in the
-    order of the manifest; empty when the pass did not solve)."""
+    too_small_ids: frozenset[str] = frozenset()  # segmented poses with fewer mask pixels than the minimum
+    left_out_residuals: dict[str, PoseResidual] = field(default_factory=dict)
+    """Residuals against the solved transform of the segmented poses that were kept out of the solve, held out or
+    too small, in the order of the manifest (empty when the pass did not solve). Only the held-out ones are
+    judged (``held_out_block``); the too-small ones are shown for information."""
 
 
 @dataclass
@@ -213,31 +229,35 @@ def model_parameters(params: RegisterParameters, model: str) -> RegistrationPara
 
 
 def register_fit_poses(measurements: list[PoseMeasurement], registration_parameters: RegistrationParameters,
-                       held_out_ids: frozenset[str] | None, name: str, prediction: str) -> PassRun:
-    """One pass: register the measurements that are not held out, then evaluate the held-out ones against the
-    transform that came out (nothing is evaluated when the registration did not solve)."""
+                       held_out_ids: frozenset[str] | None, minimum_mask_pixels: int, name: str,
+                       prediction: str) -> PassRun:
+    """One pass: register the measurements that are neither held out nor too small, then evaluate the left-out
+    ones against the transform that came out (nothing is evaluated when the registration did not solve)."""
     held_out = held_out_ids or frozenset()
-    result, pose_ids = register_measurements([m for m in measurements if m.pose_id not in held_out],
+    too_small = frozenset(m.pose_id for m in measurements if m.ok and m.segmentation.inlier_count < minimum_mask_pixels)
+    left_out = held_out | too_small
+    result, pose_ids = register_measurements([m for m in measurements if m.pose_id not in left_out],
                                              registration_parameters)
-    held_out_residuals = dict(evaluate_measurements([m for m in measurements if m.pose_id in held_out], result))
-    return PassRun(name, prediction, measurements, result, pose_ids, held_out_ids, held_out_residuals)
+    left_out_residuals = dict(evaluate_measurements([m for m in measurements if m.pose_id in left_out], result))
+    return PassRun(name, prediction, measurements, result, pose_ids, held_out_ids, too_small, left_out_residuals)
 
 
 def run_model(capture_set: CaptureSet, params: RegisterParameters, model: str,
               pass_one_measurements: list[PoseMeasurement], pass_one_prediction: str,
               held_out_ids: frozenset[str] | None = None) -> ModelRun:
     """Register the pass-1 measurements with ``model``; if that solves, segment every pose again with the
-    prediction from the solution and register again. Held-out poses (None: no plan) are segmented like the
-    others in both passes but take no part in either solve; each pass evaluates them against its own solution."""
+    prediction from the solution and register again. Held-out poses (None: no plan) and poses with too few mask
+    pixels are segmented like the others in both passes but take no part in either solve; each pass evaluates
+    the held-out ones against its own solution."""
     registration_parameters = model_parameters(params, model)
-    pass_one = register_fit_poses(pass_one_measurements, registration_parameters, held_out_ids, PASS_ONE,
-                                  pass_one_prediction)
+    pass_one = register_fit_poses(pass_one_measurements, registration_parameters, held_out_ids,
+                                  params.minimum_mask_pixels, PASS_ONE, pass_one_prediction)
     if not pass_one.result.solved():
         return ModelRun(model, registration_parameters, pass_one, None)
     measurements_two = measure_all(capture_set, params.pipeline, pass_one.result.sensor_to_base,
                                    pass_one.result.scale)
-    pass_two = register_fit_poses(measurements_two, registration_parameters, held_out_ids, PASS_TWO,
-                                  PREDICTION_PASS_ONE)
+    pass_two = register_fit_poses(measurements_two, registration_parameters, held_out_ids,
+                                  params.minimum_mask_pixels, PASS_TWO, PREDICTION_PASS_ONE)
     return ModelRun(model, registration_parameters, pass_one, pass_two)
 
 
@@ -334,9 +354,10 @@ def pose_entries(run: PassRun) -> list[dict]:
     """One entry per pose of the pass (all poses, segmented or not): segmentation statistics, board center,
     and, for poses that entered the solve, the residuals. ``normal_residual_sensor`` is the normal residual
     vector R^t (R n_k - m_k) = n_k - R^t m_k in the sensor frame (measured minus predicted normal), whose x
-    and y components are along the image's u and v axes. A held-out pose (``held_out`` true) is never ``used``;
-    its residuals are those against the transform solved without it."""
-    residual_of = {**dict(zip(run.pose_ids, run.result.residuals)), **run.held_out_residuals}
+    and y components are along the image's u and v axes. A pose kept out of the solve (``held_out`` true, or
+    ``excluded`` set to the reason, EXCLUDED_TOO_SMALL) is never ``used``; its residuals are those against the
+    transform solved without it."""
+    residual_of = {**dict(zip(run.pose_ids, run.result.residuals)), **run.left_out_residuals}
     held_out_ids = run.held_out_ids or frozenset()
     rotation = run.result.sensor_to_base.rotation
     entries = []
@@ -357,6 +378,7 @@ def pose_entries(run: PassRun) -> list[dict]:
             "board_center_sensor_mm": measurement.board_center_sensor_mm,
             "touches_border": measurement.touches_border,
             "held_out": measurement.pose_id in held_out_ids,
+            "excluded": EXCLUDED_TOO_SMALL if measurement.pose_id in run.too_small_ids else None,
             "used": False, "normal_residual_deg": float("nan"), "offset_residual_mm": float("nan"),
             "normal_residual_sensor": [float("nan")] * 3,
         }
@@ -373,21 +395,23 @@ def pose_entries(run: PassRun) -> list[dict]:
 
 def held_out_block(run: PassRun, limits: RegistrationParameters) -> dict | None:
     """The ``held_out`` section of a pass block, or None when no plan was given: the held-out poses that could
-    be evaluated with their residuals (``poses``), those whose segmentation failed or that had no solution to be
-    evaluated against (``unevaluated_pose_ids``), ``count`` of the evaluated, their RMS and maximum residuals
+    be evaluated with their residuals (``poses``), those whose segmentation failed, whose board image was too
+    small, or that had no solution to be evaluated against (``unevaluated_pose_ids``), ``count`` of the evaluated, their RMS and maximum residuals
     (NaN when none), and ``held_out_within_limits``: the fit's four acceptance thresholds (``limits``) applied to
     them (null when there are none to judge)."""
     if run.held_out_ids is None:
         return None
-    residuals = list(run.held_out_residuals.values())
+    evaluated = {pose_id: residual for pose_id, residual in run.left_out_residuals.items()
+                 if pose_id in run.held_out_ids and pose_id not in run.too_small_ids}
+    residuals = list(evaluated.values())
     statistics = residual_statistics(residuals)
     return {
         "count": len(residuals),
         "poses": [{"pose_id": pose_id, "normal_residual_deg": residual.normal_angle_degrees,
                    "offset_residual_mm": residual.offset_residual_mm}
-                  for pose_id, residual in run.held_out_residuals.items()],
+                  for pose_id, residual in evaluated.items()],
         "unevaluated_pose_ids": [m.pose_id for m in run.measurements
-                                 if m.pose_id in run.held_out_ids and m.pose_id not in run.held_out_residuals],
+                                 if m.pose_id in run.held_out_ids and m.pose_id not in evaluated],
         "rms_normal_residual_deg": statistics.rms_normal_degrees,
         "max_normal_residual_deg": statistics.max_normal_degrees,
         "rms_offset_residual_mm": statistics.rms_offset_mm,
@@ -412,6 +436,8 @@ def pass_block(run: PassRun, limits: RegistrationParameters) -> dict:
         "max_offset_residual_mm": result.max_offset_residual_mm,
         "matrix": None, "rotation": None, "rotation_vector_deg": None, "translation_mm": None, "scale": None,
         "rejected_pose_ids": [pid for pid, r in zip(run.pose_ids, result.residuals) if not r.used],
+        "too_small_pose_ids": [m.pose_id for m in run.measurements if m.pose_id in run.too_small_ids],
+        "too_small_count": len(run.too_small_ids),
         "held_out": held_out_block(run, limits),
         "poses": pose_entries(run),
     }
@@ -446,6 +472,7 @@ def registration_document(manifest_path: Path, params: RegisterParameters, runs:
         "parameters": {
             "pipeline": asdict(params.pipeline),
             "registration": {**asdict(params.registration), "outlier_rejection_rounds": outlier_rounds},
+            "minimum_mask_pixels": params.minimum_mask_pixels,
         },
         "model_order": [run.model for run in runs],
         "models": models,
@@ -517,7 +544,7 @@ def held_out_exceed_limits(run: ModelRun) -> bool:
     return block is not None and block["held_out_within_limits"] is False
 
 
-def print_summary(runs: list[ModelRun], comparison: dict | None) -> None:
+def print_summary(runs: list[ModelRun], comparison: dict | None, minimum_mask_pixels: int) -> None:
     """One line per model and pass, then the per-pose table of the final pass of each model."""
     for run in runs:
         for pass_run in (run.pass_one, run.pass_two):
@@ -528,6 +555,8 @@ def print_summary(runs: list[ModelRun], comparison: dict | None) -> None:
                     f"{result.poses_used}/{len(pass_run.measurements)} poses used, "
                     f"RMS normal {result.rms_normal_residual_degrees:.3f} deg, "
                     f"RMS offset {result.rms_offset_residual_mm:.3f} mm, scale {result.scale:.5f}")
+            if pass_run.too_small_ids:
+                line += f"; {len(pass_run.too_small_ids)} left out as too small (fewer than {minimum_mask_pixels} pixels)"
             truth_errors = None if comparison is None else comparison[run.model].get(pass_run.name)
             if truth_errors is not None:
                 line += (f"; vs truth {truth_errors['rotation_error_deg']:.4f} deg, "
@@ -547,7 +576,7 @@ def print_summary(runs: list[ModelRun], comparison: dict | None) -> None:
             print(f"{entry['pose_id']:<{POSE_COLUMN_WIDTH}} {str(entry['method']):<20} {entry['pixels']:>7} "
                   f"{entry['plane_rms_mm']:>7.3f} {entry['normal_residual_deg']:>10.3f} "
                   f"{entry['offset_residual_mm']:>10.3f}  "
-                  f"{'held out' if entry['held_out'] else 'yes' if entry['used'] else 'NO'}")
+                  f"{'too small' if entry['excluded'] else 'held out' if entry['held_out'] else 'yes' if entry['used'] else 'NO'}")
 
 
 # ---------------------------------------------------------------------------
@@ -556,6 +585,7 @@ def print_summary(runs: list[ModelRun], comparison: dict | None) -> None:
 def build_parser() -> argparse.ArgumentParser:
     pipeline = PipelineParameters()
     registration = RegistrationParameters()
+    defaults = RegisterParameters()
     parser = argparse.ArgumentParser(
         prog="python3 -m planereg.analysis.register",
         description="Register a capture session: segment every board, solve the sensor-to-base transform "
@@ -578,6 +608,9 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--max-offset-mm", type=float, default=registration.maximum_offset_residual_mm)
     parser.add_argument("--min-normal-spread", type=float, default=registration.minimum_normal_spread)
     parser.add_argument("--min-similarity-spread", type=float, default=registration.minimum_similarity_spread)
+    parser.add_argument("--min-mask-pixels", type=int, default=defaults.minimum_mask_pixels,
+                        help="leave out of every solve a pose whose board image has fewer segmented pixels than this "
+                             "(too small for a reliable plane; same default as the capture check)")
     parser.add_argument("--plan", type=Path, default=None,
                         help="the plan's poses.csv: poses tagged held out (holdout = 1) are left out of the solve "
                              "and evaluated against it instead")
@@ -604,7 +637,7 @@ def parameters_from_arguments(args: argparse.Namespace) -> RegisterParameters:
         maximum_rms_offset_residual_mm=args.max_rms_offset_mm,
         maximum_normal_residual_degrees=args.max_normal_deg, maximum_offset_residual_mm=args.max_offset_mm,
         minimum_normal_spread=args.min_normal_spread, minimum_similarity_spread=args.min_similarity_spread)
-    return RegisterParameters(models, pipeline, registration)
+    return RegisterParameters(models, pipeline, registration, minimum_mask_pixels=args.min_mask_pixels)
 
 
 def load_board_records(manifest_path: Path) -> CaptureSet:
@@ -653,7 +686,7 @@ def main(argv: list[str] | None = None) -> int:
     masks = segmentation_masks(runs)
     np.savez_compressed(args.out / SEGMENTATION_FILE_NAME, **masks)
     (args.out / REGISTRATION_FILE_NAME).write_text(json.dumps(document, indent=2), encoding="utf-8")
-    print_summary(runs, comparison)
+    print_summary(runs, comparison, params.minimum_mask_pixels)
 
     if args.figures:
         from planereg.analysis import residual_maps    # lazy: matplotlib is optional and the module imports this one

@@ -703,8 +703,12 @@ words are those of section 4):
   unusable, re-plan it slightly inward.
 - Board image too small (fewer than 1,000 pixels found): the pose is at the limit
   of what the sensor can read, usually the far standoff at the largest tilt. Its
-  plane is noisy, so the residual flags are not raised for it. Do not re-capture it;
-  drop it from the plan. The 1,000 is a placeholder until real sessions set it.
+  plane is noisy, so the residual flags are not raised for it, and the analysis
+  leaves it out of the fit. Do not re-capture it; drop it from the plan. The 1,000
+  is a placeholder until real sessions set it. In a full-scale synthetic rehearsal
+  of this procedure, 11 of 235 poses were flagged this way, all but one at the
+  950 mm standoff with 30 degrees of tilt; whether the real sensor reads those
+  poses is one of the things the first session will show.
 - Segmentation failed: the software could not find a flat surface of the board's
   size facing the sensor where the pose says it should be; the pose was copied
   wrongly, or something flat is closer to the sensor than the board (a cable, a

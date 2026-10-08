@@ -31,6 +31,10 @@ from sphcal.io.capture_set import CaptureSet
 
 DEFAULT_BORDER_MARGIN_PX = 4
 """Mask pixels this close to the image border mean the board is partly out of view."""
+DEFAULT_MINIMUM_MASK_PIXELS = 1000
+"""A board image with fewer segmented pixels than this is too small to give a reliable plane (a pose at the limit
+of the sensor's reach). The capture check flags such a pose and the registration leaves it out; both take their
+default from here so that the two tools agree. A placeholder until real sessions set it."""
 
 
 @dataclass(frozen=True)

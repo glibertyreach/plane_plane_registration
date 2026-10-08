@@ -300,13 +300,14 @@ def standoff_groups(poses: list[dict], params: FigureParameters) -> tuple[list[l
 
 
 def unused_label(poses: list[dict]) -> str:
-    """Legend text for the poses that took no part in the solve: "held out" when all of them were kept out by a
-    plan, "rejected" when none was, else both."""
+    """Legend text for the poses that took no part in the solve, by why: "too small" (a board image with too few
+    pixels), "held out" (kept out by a plan) or "rejected" (dropped as an outlier); when several kinds are present
+    they are named together, e.g. "held out or too small"."""
     unused = [pose for pose in poses if not pose["used"]]
-    held_out = [pose for pose in unused if pose.get("held_out")]
-    if unused and len(held_out) == len(unused):
-        return "held out"
-    return "rejected or held out" if held_out else "rejected"
+    reasons = [name for name, present in (("rejected", any(not p.get("held_out") and not p.get("excluded") for p in unused)),
+                                          ("held out", any(p.get("held_out") and not p.get("excluded") for p in unused)),
+                                          ("too small", any(p.get("excluded") for p in unused))) if present]
+    return " or ".join(reasons) if reasons else "rejected"
 
 
 def image_axes(axis, image_size_px: tuple[int, int], xlabel: str = "u (pixel)", ylabel: str = "v (pixel)") -> None:

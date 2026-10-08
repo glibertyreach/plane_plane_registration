@@ -17,9 +17,12 @@ import pytest
 from scipy import ndimage
 
 from planereg.analysis import compare, register, report, residual_maps, simulate
+from planereg.capture.check_captures import CheckParameters
+from planereg.core.pipeline import DEFAULT_MINIMUM_MASK_PIXELS
 from sphcal.cli.make_manifest import Messages, read_pose_log
 from sphcal.geometry.transforms import RigidTransform
 from sphcal.io.matcloud import read_matcloud
+from sphcal.io.poses import load_manifest, write_manifest_json
 
 ROTATION_TOLERANCE_DEG = 0.05
 TRANSLATION_TOLERANCE_MM = 0.5
@@ -45,6 +48,14 @@ BOARD_MASK_SIZE_PX = (40, 60)
 """Rows and columns of the synthetic board mask of the fly-away test."""
 IMAGE_DEPTH_MM = 600.0
 """Depth of the board in the clutter test."""
+REGISTER_ALL_POSES_ARGUMENTS = ["--min-mask-pixels", "0"]
+"""Register options for the sessions whose every pose is meant to be fitted: the register tool leaves out a pose
+with fewer mask pixels than its default minimum (1000, which suits the real sensor), and the small-camera sessions
+(335 to 870 pixels per board) and one pose of the default plan on the 320 x 240 camera are below it."""
+SHIFT_MM = 10.0
+"""Deliberate error added to the logged position of the tiny-mask pose."""
+TINY_POSE_SHIFTED_OFFSET_MIN_MM = 5.0
+"""When the shifted pose is fitted, the fit's worst offset residual shows at least this much of the shift."""
 HELD_OUT_EVERY = 4
 """Every fourth pose of the holdout session is tagged held out in its plan (6 of 24)."""
 HELD_OUT_RMS_NORMAL_TOLERANCE_DEG = 0.1
@@ -89,7 +100,7 @@ def analysis_clean(tmp_path_factory):
     """A default-plan session with clutter and fly-aways, registered with both models and figures."""
     root = tmp_path_factory.mktemp("analysis_clean")
     truth = make_session(root / "session", "--clutter", "--flyaways", "--frames", "2", "--seed", "1")
-    exit_code = register.main(["--manifest", str(root / "session" / "manifest.json"), "--out", str(root / "reg"),
+    exit_code = register.main([*REGISTER_ALL_POSES_ARGUMENTS, "--manifest", str(root / "session" / "manifest.json"), "--out", str(root / "reg"),
                                "--truth", str(root / "session" / "truth.json"), "--pixel-maps", "2",
                                "--pixel-maps-random", "1"])
     document = json.loads((root / "reg" / "registration.json").read_text(encoding="utf-8"))
@@ -102,7 +113,7 @@ def analysis_scaled(tmp_path_factory):
     root = tmp_path_factory.mktemp("analysis_scaled")
     truth = make_session(root / "session", "--clutter", "--flyaways", "--frames", "2", "--seed", "2",
                          "--scale", str(INJECTED_SCALE))
-    register.main(["--manifest", str(root / "session" / "manifest.json"), "--out", str(root / "reg"),
+    register.main([*REGISTER_ALL_POSES_ARGUMENTS, "--manifest", str(root / "session" / "manifest.json"), "--out", str(root / "reg"),
                    "--no-figures"])
     document = json.loads((root / "reg" / "registration.json").read_text(encoding="utf-8"))
     return {"root": root, "truth": truth, "document": document}
@@ -116,7 +127,7 @@ def analysis_backlash(tmp_path_factory):
         truth = make_session(root / procedure, "--procedure", procedure, "--backlash-deg", str(BACKLASH_DEG),
                              "--backlash-mm", str(BACKLASH_MM), "--frames", "2", "--seed", "4")
         rough = write_rough(truth, root / f"rough_{procedure}.json")
-        register.main(["--manifest", str(root / procedure / "manifest.json"), "--out", str(root / f"reg_{procedure}"),
+        register.main([*REGISTER_ALL_POSES_ARGUMENTS, "--manifest", str(root / procedure / "manifest.json"), "--out", str(root / f"reg_{procedure}"),
                        "--sensor-in-base", str(rough), "--model", "rigid", "--no-figures"])
     exit_code = compare.main(["--registration-a", str(root / "reg_A" / "registration.json"),
                               "--registration-b", str(root / "reg_B" / "registration.json"),
@@ -276,7 +287,7 @@ def test_register_recovers_the_transform_in_both_passes_and_models(analysis_clea
 def test_register_with_a_rough_transform_predicts_in_the_first_pass_too(analysis_clean, tmp_path):
     rough = write_rough(analysis_clean["truth"], tmp_path / "rough.json")
     out = tmp_path / "reg"
-    assert register.main(["--manifest", str(analysis_clean["root"] / "session" / "manifest.json"), "--out", str(out),
+    assert register.main([*REGISTER_ALL_POSES_ARGUMENTS, "--manifest", str(analysis_clean["root"] / "session" / "manifest.json"), "--out", str(out),
                           "--sensor-in-base", str(rough), "--model", "rigid", "--no-figures"]) == register.EXIT_OK
     document = json.loads((out / "registration.json").read_text(encoding="utf-8"))
     assert document["model_order"] == ["rigid"]
@@ -441,7 +452,7 @@ def analysis_holdout(tmp_path_factory):
     truth = make_session(root / "session", "--plan", str(plan), "--sensor-to-base", str(rough), "--frames", "1",
                          "--seed", "6", "--image-size", *map(str, SMALL_IMAGE_SIZE))
     manifest = root / "session" / "manifest.json"
-    exit_code = register.main(["--manifest", str(manifest), "--plan", str(plan), "--out", str(root / "reg"),
+    exit_code = register.main([*REGISTER_ALL_POSES_ARGUMENTS, "--manifest", str(manifest), "--plan", str(plan), "--out", str(root / "reg"),
                                "--no-figures", "--truth", str(root / "session" / "truth.json")])
     document = json.loads((root / "reg" / "registration.json").read_text(encoding="utf-8"))
     return {"root": root, "truth": truth, "plan": plan, "manifest": manifest, "held_out": held_out,
@@ -486,7 +497,7 @@ def test_register_with_a_plan_fits_only_the_poses_that_are_not_held_out(analysis
 
 
 def test_register_without_a_plan_holds_nothing_out(analysis_holdout, tmp_path):
-    assert register.main(["--manifest", str(analysis_holdout["manifest"]), "--out", str(tmp_path), "--model", "rigid",
+    assert register.main([*REGISTER_ALL_POSES_ARGUMENTS, "--manifest", str(analysis_holdout["manifest"]), "--out", str(tmp_path), "--model", "rigid",
                           "--no-figures"]) == register.EXIT_OK
     document = json.loads((tmp_path / "registration.json").read_text(encoding="utf-8"))
     block = document["models"]["rigid"][register.PASS_TWO]
@@ -496,7 +507,7 @@ def test_register_without_a_plan_holds_nothing_out(analysis_holdout, tmp_path):
 
 def test_register_prints_a_held_out_line_per_model_and_exits_one_when_they_exceed_the_limits(analysis_holdout, tmp_path,
                                                                                                 capsys):
-    arguments = ["--manifest", str(analysis_holdout["manifest"]), "--plan", str(analysis_holdout["plan"]),
+    arguments = [*REGISTER_ALL_POSES_ARGUMENTS, "--manifest", str(analysis_holdout["manifest"]), "--plan", str(analysis_holdout["plan"]),
                  "--out", str(tmp_path), "--no-figures"]
     assert register.main(arguments) == register.EXIT_OK
     lines = [line for line in capsys.readouterr().out.splitlines() if "held out:" in line]
@@ -516,7 +527,7 @@ def test_register_fits_a_manifest_pose_missing_from_the_plan_and_warns(analysis_
     recaptured = next(pose_id for pose_id in pose_ids if pose_id not in held_out)       # not in the plan
     never_captured = "planned_but_never_captured"                                        # not in the manifest
     plan = write_plan_csv(tmp_path / "poses.csv", truth, held_out, omit=(recaptured,), extra_rows=((never_captured, 1),))
-    assert register.main(["--manifest", str(analysis_holdout["manifest"]), "--plan", str(plan),
+    assert register.main([*REGISTER_ALL_POSES_ARGUMENTS, "--manifest", str(analysis_holdout["manifest"]), "--plan", str(plan),
                           "--out", str(tmp_path / "reg"), "--model", "rigid", "--no-figures"]) == register.EXIT_OK
     printed = capsys.readouterr().out
     assert f"WARNING: 1 of {len(pose_ids)} plan poses were not captured (1 of them tagged held out): {never_captured}" \
@@ -570,7 +581,7 @@ def test_report_and_compare_carry_the_held_out_poses(analysis_holdout, tmp_path)
     assert "| held-out poses |" in text                                   # the comparison table
     # A registration without a plan has no such subsection.
     plain = tmp_path / "plain"
-    register.main(["--manifest", str(analysis_holdout["manifest"]), "--out", str(plain), "--model", "rigid",
+    register.main([*REGISTER_ALL_POSES_ARGUMENTS, "--manifest", str(analysis_holdout["manifest"]), "--out", str(plain), "--model", "rigid",
                    "--no-figures"])
     report.main(["--registration", str(plain / "registration.json"), "--out", str(tmp_path / "plain.md")])
     assert "Held-out poses" not in (tmp_path / "plain.md").read_text(encoding="utf-8")
@@ -578,6 +589,94 @@ def test_report_and_compare_carry_the_held_out_poses(analysis_holdout, tmp_path)
     compare.main(["--registration-a", str(registration), "--registration-b", str(plain / "registration.json"),
                   "--out", str(tmp_path / "cmp2"), "--model", "rigid"])
     assert "held_out" not in json.loads((tmp_path / "cmp2" / "comparison.json").read_text())["models"]["rigid"]
+
+
+# ---------------------------------------------------------------------------
+# Poses with a tiny board image
+# ---------------------------------------------------------------------------
+def test_register_and_check_share_the_default_minimum_of_mask_pixels():
+    default = register.build_parser().parse_args(["--manifest", "m.json", "--out", "o"]).min_mask_pixels
+    assert default == register.RegisterParameters().minimum_mask_pixels == DEFAULT_MINIMUM_MASK_PIXELS
+    assert CheckParameters().minimum_mask_pixels == DEFAULT_MINIMUM_MASK_PIXELS
+    given = register.parameters_from_arguments(register.build_parser().parse_args(
+        ["--manifest", "m.json", "--out", "o", "--min-mask-pixels", "250"]))
+    assert given.minimum_mask_pixels == 250
+
+
+def test_register_leaves_a_pose_with_a_tiny_mask_out_of_every_solve(analysis_holdout, tmp_path, capsys):
+    """The pose with the fewest mask pixels has its logged position shifted, so that fitting it is visible in the
+    fit's residuals: with the minimum above its pixel count it is left out, listed, and the fit is clean; with
+    the minimum 0 it is fitted and spoils the fit."""
+    pass_two = analysis_holdout["document"]["models"]["rigid"][register.PASS_TWO]["poses"]
+    tiny = min(pass_two, key=lambda pose: pose["pixels"])
+    records = load_manifest(analysis_holdout["manifest"])
+    for record in records:
+        if record.pose_id == tiny["pose_id"]:
+            pose = record.target_pose_positioner
+            record.target_pose_positioner = RigidTransform(pose.rotation, pose.translation + SHIFT_MM * pose.rotation[:, 2])
+    manifest = write_manifest_json(tmp_path / "shifted.json", records)
+
+    def run(minimum: int, *extra: str) -> dict:
+        out = tmp_path / f"reg_{minimum}_{len(extra)}"
+        register.main(["--manifest", str(manifest), "--out", str(out), "--model", "rigid", "--no-figures",
+                       "--min-mask-pixels", str(minimum), *extra])
+        return json.loads((out / "registration.json").read_text(encoding="utf-8"))
+
+    # Minimum 0: the pose is fitted and its shift shows in the fit's worst offset residual.
+    fitted = run(0)["models"]["rigid"][register.PASS_TWO]
+    entry = {p["pose_id"]: p for p in fitted["poses"]}[tiny["pose_id"]]
+    assert entry["used"] and entry["excluded"] is None and fitted["too_small_pose_ids"] == []
+    assert fitted["too_small_count"] == 0 and fitted["max_offset_residual_mm"] > TINY_POSE_SHIFTED_OFFSET_MIN_MM
+
+    # Minimum above its count: left out of both passes' solves, listed, and the fit excludes the shifted pose.
+    minimum = tiny["pixels"] + 1
+    capsys.readouterr()
+    document = run(minimum)
+    printed = capsys.readouterr().out
+    assert document["parameters"]["minimum_mask_pixels"] == minimum
+    for pass_name in (register.PASS_ONE, register.PASS_TWO):
+        block = document["models"]["rigid"][pass_name]
+        expected = [p["pose_id"] for p in block["poses"] if p["segmented"] and p["pixels"] < minimum]
+        assert block["too_small_pose_ids"] == expected and block["too_small_count"] == len(expected)
+        assert block["poses_used"] == block["poses_total"] - len(expected)
+        for pose in block["poses"]:
+            assert pose["used"] == (pose["pose_id"] not in expected)
+            assert (pose["excluded"] == register.EXCLUDED_TOO_SMALL) == (pose["pose_id"] in expected)
+    block = document["models"]["rigid"][register.PASS_TWO]
+    entry = {p["pose_id"]: p for p in block["poses"]}[tiny["pose_id"]]
+    assert tiny["pose_id"] in block["too_small_pose_ids"] and not entry["used"] and not entry["held_out"]
+    assert entry["excluded"] == register.EXCLUDED_TOO_SMALL
+    assert entry["pixels"] == tiny["pixels"] and entry["segmented"] and np.isfinite(entry["plane_rms_mm"])
+    # The fit does not contain it, and its residual against the clean fit shows the shift (for information).
+    assert block["max_offset_residual_mm"] < TINY_POSE_SHIFTED_OFFSET_MIN_MM / 5
+    assert abs(abs(entry["offset_residual_mm"]) - SHIFT_MM) < TRANSLATION_TOLERANCE_MM
+    assert f"left out as too small (fewer than {minimum} pixels)" in printed
+
+    # A tiny pose that the plan holds out is not evaluated either; it is listed as unevaluated.
+    plan = write_plan_csv(tmp_path / "poses.csv", analysis_holdout["truth"], {tiny["pose_id"]})
+    held = run(minimum, "--plan", str(plan))["models"]["rigid"][register.PASS_TWO]
+    assert held["held_out"]["count"] == 0 and held["held_out"]["unevaluated_pose_ids"] == [tiny["pose_id"]]
+    assert held["held_out"]["held_out_within_limits"] is None
+
+    # The report states the count and marks the pose.
+    assert report.main(["--registration", str(tmp_path / f"reg_{minimum}_0" / "registration.json"),
+                        "--out", str(tmp_path / "report.md")]) == report.EXIT_OK
+    text = (tmp_path / "report.md").read_text(encoding="utf-8")
+    assert f"{len(block['too_small_pose_ids'])} poses left out as too small (fewer than {minimum} pixels)" in text
+    assert any(line.startswith(f"| {tiny['pose_id']} |") and line.endswith(f"| {report.TOO_SMALL_MARK} |")
+               for line in text.splitlines())
+
+
+def test_figure_legends_name_the_reason_a_pose_took_no_part_in_the_solve():
+    used = {"used": True}
+    rejected = {"used": False, "held_out": False, "excluded": None}
+    held_out = {"used": False, "held_out": True, "excluded": None}
+    too_small = {"used": False, "held_out": False, "excluded": register.EXCLUDED_TOO_SMALL}
+    assert residual_maps.unused_label([used, too_small]) == "too small"
+    assert residual_maps.unused_label([used, held_out]) == "held out"
+    assert residual_maps.unused_label([used, rejected]) == "rejected"
+    assert residual_maps.unused_label([used, rejected, too_small]) == "rejected or too small"
+    assert "rejected" not in residual_maps.unused_label([used, held_out, too_small])
 
 
 @pytest.mark.parametrize("tool", [simulate, register, residual_maps, compare, report])

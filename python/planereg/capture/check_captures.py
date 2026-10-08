@@ -73,8 +73,8 @@ import numpy as np
 from planereg.capture.common import (EXIT_FLAGGED, EXIT_INPUT_ERROR, EXIT_OK, MATRIX_PRINT_DECIMALS, PlanInputError,
                                      board_poses_only, board_touches_border, format_number, load_rough_transform, print_error,
                                      print_warning, write_json)
-from planereg.core.pipeline import DEFAULT_BORDER_MARGIN_PX, PipelineParameters, PoseMeasurement, measure_all, \
-    register_measurements
+from planereg.core.pipeline import DEFAULT_BORDER_MARGIN_PX, DEFAULT_MINIMUM_MASK_PIXELS, PipelineParameters, \
+    PoseMeasurement, measure_all, register_measurements
 from planereg.core.registration import RegistrationParameters, RegistrationResult, TransformModel, spread
 from sphcal.io.capture_set import CaptureSet
 from sphcal.io.poses import load_manifest
@@ -117,10 +117,10 @@ class CheckParameters:
     fraction are left out of the temporal-mean image."""
     border_margin_px: int = DEFAULT_BORDER_MARGIN_PX
     """Mask pixels this close to the image border mean the board is cut off."""
-    minimum_mask_pixels: int = 1000
+    minimum_mask_pixels: int = DEFAULT_MINIMUM_MASK_PIXELS
     """A board image with fewer segmented pixels than this is flagged as too small to give a reliable plane
-    (and its residual flags are suppressed, since its residuals are expected to be poor). A placeholder until
-    real sessions set it."""
+    (and its residual flags are suppressed, since its residuals are expected to be poor). The default is shared
+    with the register tool, which leaves such poses out of its solve. A placeholder until real sessions set it."""
     target_offset_mm: float = 0.0
     """Distance from the logged frame's origin to the board's front face along the logged frame's +z, in mm:
     0 when the logged pose is the board tool frame, the flange-to-board-face distance D when the controller

@@ -7,7 +7,7 @@ Markdown report of a registration (code design 8.4).
 The report holds, per transform model (the final pass of each): the verdict against the acceptance thresholds,
 the transform, the residual summary, the spreads against their minimums, the per-pass numbers, the segmentation
 summary (methods, pixel counts, poses whose segmentation failed, poses rejected as outliers), the per-pose
-residual table (held-out poses marked), the held-out poses when ``register`` was given a plan (count, RMS and
+residual table (held-out and too-small poses marked), the number of poses left out as too small, the held-out poses when ``register`` was given a plan (count, RMS and
 maximum residuals against the same limits), the errors against a known truth when ``register`` was given one,
 and, when a comparison is given, its RMS values and relative transform; finally the list of figures found next
 to the inputs.
@@ -45,7 +45,9 @@ MATRIX_DIGITS = 6
 FIGURE_PATTERN = "*.png"
 """Figure files looked for in the figures directory next to registration.json and in comparison.json's directory."""
 HELD_OUT_MARK = "held out"
-"""Entry of the per-pose table's "held out" column for a pose that was kept out of the solve."""
+TOO_SMALL_MARK = "too small"
+"""Entries of the per-pose table's "left out" column for a pose kept out of the solve as held out, or as having a
+board image with too few pixels."""
 PIXEL_PERCENTILES = (0, 50, 100)
 """Percentiles of the mask pixel counts quoted in the segmentation summary: minimum, median, maximum."""
 
@@ -89,7 +91,8 @@ def held_out_lines(held_out: dict, limits: dict) -> list[str]:
     lines += [f"{held_out['count']} held-out poses were left out of the solve and evaluated against its transform."]
     unevaluated = held_out["unevaluated_pose_ids"]
     if unevaluated:
-        lines += [f"Held-out poses that could not be evaluated (segmentation failed): {', '.join(unevaluated)}."]
+        lines += [f"Held-out poses that could not be evaluated (segmentation failed or board image too small): "
+                  f"{', '.join(unevaluated)}."]
     if not held_out["count"]:
         return lines + [""]
     rows = limit_rows(held_out["rms_normal_residual_deg"], held_out["max_normal_residual_deg"],
@@ -98,7 +101,15 @@ def held_out_lines(held_out: dict, limits: dict) -> list[str]:
     return lines + [""] + table(["quantity", "value", "limit", "result"], rows) + [""]
 
 
-def model_section(model: str, entry: dict, limits: dict, truth_entry: dict | None) -> list[str]:
+def left_out_mark(pose: dict) -> str:
+    """The "left out" cell of a pose: too small (which wins), held out, or empty."""
+    if pose.get("excluded"):
+        return TOO_SMALL_MARK
+    return HELD_OUT_MARK if pose.get("held_out") else ""
+
+
+def model_section(model: str, entry: dict, limits: dict, truth_entry: dict | None,
+                  document_parameters: dict) -> list[str]:
     """The report lines of one model."""
     block = final_block(entry)
     lines = [f"## Model: {model}", ""]
@@ -159,14 +170,18 @@ def model_section(model: str, entry: dict, limits: dict, truth_entry: dict | Non
     if pixels:
         low, middle, high = (np.percentile(pixels, q) for q in PIXEL_PERCENTILES)
         lines += [f"Mask pixels per pose: minimum {low:.0f}, median {middle:.0f}, maximum {high:.0f}."]
+    if "too_small_count" in block:
+        minimum = document_parameters.get("minimum_mask_pixels")
+        lines += [f"{block['too_small_count']} poses left out as too small (fewer than {minimum} pixels)"
+                  + (f": {', '.join(block['too_small_pose_ids'])}." if block["too_small_count"] else ".")]
     lines += [f"Poses whose segmentation failed: {', '.join(failed) if failed else 'none'}.",
               f"Poses rejected as outliers: {', '.join(block['rejected_pose_ids']) or 'none'}.", ""]
 
     lines += ["### Residual of every pose", ""]
     rows = [[pose["pose_id"], str(pose["method"]), str(pose["pixels"]), number(pose["plane_rms_mm"]),
              number(pose["normal_residual_deg"]), number(pose["offset_residual_mm"]),
-             "yes" if pose["used"] else "no", HELD_OUT_MARK if pose.get("held_out") else ""] for pose in poses]
-    lines += table(["pose", "method", "pixels", "plane RMS (mm)", "normal (deg)", "offset (mm)", "used", "held out"],
+             "yes" if pose["used"] else "no", left_out_mark(pose)] for pose in poses]
+    lines += table(["pose", "method", "pixels", "plane RMS (mm)", "normal (deg)", "offset (mm)", "used", "left out"],
                    rows) + [""]
 
     if truth_entry:
@@ -237,7 +252,7 @@ def build_report(document: dict, comparison: dict | None, registration_path: Pat
     lines += [""]
     truth = document.get("truth_comparison") or {}
     for model in document["model_order"]:
-        lines += model_section(model, document["models"][model], limits, truth.get(model))
+        lines += model_section(model, document["models"][model], limits, truth.get(model), document["parameters"])
     if comparison is not None:
         lines += comparison_section(comparison)
     directories = [registration_path.parent / FIGURE_DIRECTORY_NAME]
