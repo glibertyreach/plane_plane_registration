@@ -1,11 +1,8 @@
 # Chat record: sensor-to-robot plane registration
 
-Session of 2026-10-04 to 2026-10-07 between G. Neil Haven and Claude Code (claude.ai/code).
-Compacted: the user's messages verbatim, Claude's replies as written, tool calls and their output,
-subagent reports, loaded skill text, question dialogs and image views omitted. Times are UTC. The work
-product lives in the repositories plane_plane_registration (branch main),
-depth_calibration_from_spherical_target (branch claude/vibrant-bardeen-160g78) and flexible_plane_fit
-(tag registration-work-origin).
+Session of 2026-10-04 to 2026-10-08 between G. Neil Haven and Claude Code (claude.ai/code).
+Compacted: the user's messages verbatim, Claude's replies as written; tool calls and their output, subagent
+reports, loaded skill text, question dialogs and image views omitted. Times are UTC.
 
 ---
 
@@ -1069,6 +1066,361 @@ The agent's report needs two corrections before I accept it: the global title si
 Applying the stat-size fixes, rebuilding and re-rendering the decks; re-rendering the Word page with the narrowed table in parallel.
 
 All changed slides and the Word tables now render cleanly. Cleaning the render folder, refreshing the chat record, then committing.
+
+The procedure-docs pass is complete and pushed as 01b3ea3 on main. The four deliverables are attached above.
+
+**Decisions you made, logged as rows 11 to 16 of the review's decision log:** hardware reused from stage 1 with the procedure kept self-contained; the stage-1 drawing SC1-05 referenced and its PNG embedded; capture trigger through the communication software; the same sensor and SGM settings as stage 1; two decks; decisions continue in the review's table.
+
+**Procedure.** Section 1 is now the scope of work in the stage-1 form: 1a in hand (sensor, robot, computers, and the board, adapter, run-out fixture and sensor mount from stage 1), 1b to build, 1c to buy with costs from a single script, 1d the plate specification, 1e the run-out fixture, 1f preparation. Appendices are re-lettered: A suppliers, B tool help, C installation, D the board-adapter drawing. Section 6 drops the two alternative trigger paths. The Word file validates against the Office schemas and, with LibreOffice now installed in this container, I rendered and read all 28 pages. The earlier open item, a visual check of the Word rendering, is therefore closed from my side: Appendix A code lines fit, the section 2 software table fits, the figures sit at text width.
+
+**Decks.** Ten slides for procurement and build, fifteen for the test procedure and robot program, with speaker notes on every slide that name the procedure sections. Costs on the slides are checked against the cost script by the content check. Both decks validate. I rendered and looked at all 25 slides. Two rounds of fixes followed: nine titles that wrapped were shortened to fit one line, and two stat values that wrapped over their labels were given a smaller named size. The subagent had lowered the title size for all slides to fit one long title; I restored it and shortened the title instead.
+
+| Check | Result |
+|---|---|
+| Content check, both decks | 0 problems, cost check passes |
+| Layout check, both decks | 0 warnings |
+| Office validation, docx and both pptx | pass |
+
+**Caveats.** The renders are LibreOffice's, with substitute fonts for Cambria and Calibri; PowerPoint on your machine may wrap a little differently, which is why titles were trimmed to 46 characters or fewer. The figures on the build deck's board slides are small, because the mounting figure is wide and shares the slide with three cards; their inner labels are not meant to be read from the slide. The title graphic on both decks is the subagent's design, three edge-on boards before a sensor. No notes PDF was made, following the stage-1 decision.
+
+Nothing was unpushed. GitHub's main is at 01b3ea3, the same commit as the local branch. The hook counted five commits because the container's remote-tracking reference had not been refreshed since the pushes went through the proxy, the same stale-reference effect as before. After refreshing it, local and remote agree and zero commits remain.
+
+---
+
+### User (2026-10-07 19:29)
+
+the first slide after the title slide in the registration test procedure should be an orienting slide explaining what we are testing, and why.
+
+---
+
+### Claude (2026-10-07 19:29)
+
+Adding an orienting slide "What we are testing, and why" as slide 2 of the test-procedure deck, using the three-column layout with a key message.
+
+Done. Slide 2 of the test-procedure deck is now "What we are testing, and why", pushed as a15a9c7 on main. The rebuilt deck is attached above.
+
+The slide has three columns and a key message:
+
+- **The method.** Registration of the 3D sensor to the robot from plane-to-plane correspondences: one flat board on the flange, no 2D images, no spheres; the sensor measures the board plane, the robot reports where the board is, and the transform mapping one onto the other is the registration.
+- **What is unproven.** Everything so far was verified on synthetic data: whether the board is found and the planes fit cleanly on real captures, whether robot pose errors or sensor plane errors dominate, and how much gear backlash shifts the result.
+- **What the session answers.** The transform and its residuals on real data, residual maps that point at the robot or the sensor, set A against set B for backlash, and real residuals to set the tools' thresholds, which are placeholders today.
+- **Message.** A few hundred poses decide whether a run of 1,000 or more is needed; that second run is planned only from this one's analysis.
+
+The speaker notes give the fuller account and point to the specification review and the procedure's introduction. The content check, the layout check and the Office validation pass, and I looked at the rendered slide. The deck is now 16 slides; the build README was updated to match.
+
+Already pushed. GitHub's main is at a15a9c7, identical to the local branch; the hook's count came from the stale remote-tracking reference again, which I have refreshed. Zero commits remain unpushed.
+
+---
+
+### User (2026-10-07 19:33)
+
+Slides 6 and 7 in the procurement build deck seem a bit contradictory wrt manufacturing the flat plate. 7 references "McMaster-Carr MIC-6 plus a grinding shop; Edmund Optics float glass; a small granite surface plate
+" whereas 6 references "0.05 mm over the front face, checked with a straightedge and a 0.05 mm feeler leaf after painting and after mounting".
+
+---
+
+### Claude (2026-10-07 19:33)
+
+I read the contradiction as this: slide 6 specifies the plate as ground aluminum or float glass, flat to 0.05 mm and verified in-house after painting and mounting, while slide 7 offers a third material, a granite surface plate, that the specification does not allow, and its note reads as if flatness were the supplier's check rather than yours. The procedure's appendix A has the same granite option. I'll align both to the specification: aluminum or glass only, the supplier's flatness report as the starting document, the in-house check after painting and mounting as the acceptance.
+
+---
+
+### User (2026-10-07 19:34)
+
+Is there also a procedure to test whether remounting maintains the same board pose?
+
+---
+
+### Claude (2026-10-07 19:34)
+
+The supplier alignment is pushed as 052c122 and both files are attached above.
+
+**On remounting: no, there is no such test in the procedure today.** What exists:
+
+- **Section 3, steps 2 and 3**, the run-out check and the four D measurements, are run when the board is mounted. The text says to repeat them if the tool frame already exists on the robot, and section 10 says to check the dowels and the run-out before each sub-procedure. That is a remount test in effect, but it is never named as one, has no acceptance statement of its own, and is not required after a remount within a session.
+- **The acceptance slide** of the build deck claims "the board goes back in the same place after a remount" without saying how that is verified.
+
+What a remount can change, and whether it matters:
+
+| Change after remount | Effect on the registration | Detected by |
+|---|---|---|
+| Tilt of the face relative to the flange axis | Shifts the normal of every pose; the registration absorbs part, the rest is residual | Run-out check, 0.05 mm over the 110 mm indicator circle, about 0.03 degrees |
+| Flange-to-face distance D | Shifts every plane by the change; absorbed into the translation, so it goes undetected unless D is re-measured | D at four places, within 0.05 mm |
+| Shift or rotation within the board plane | None: the plane is the same plane | Not needed |
+
+So the mechanical checks cover exactly what matters, and the in-plane position can be ignored, as appendix D already notes.
+
+**What I propose to add,** if you want it, is a short "Remount check" paragraph at the end of section 3, cross-referenced from section 10 and the acceptance slide:
+
+1. After any remount of the board or the adapter, repeat the run-out check and the four D measurements; accept when the run-out stays within 0.05 mm and the mean D is within 0.05 mm of the recorded value. If D has changed by more, update TOOL_BOARD and note it, because the pose logs before and after would otherwise refer to different frames.
+2. A sensor-side confirmation, cheap and already supported by the tools: before the first capture run, capture the board once at a fixed reference pose with a fixed pose id, and after every remount capture it again at the same robot pose. The check tool then reports the normal and offset residual between the two captures; accept within the thresholds the session is using, 1 degree and 1 mm today, tightened once real figures exist.
+3. The rule that a remount between sub-procedures A and B is an event to record in the session notes, since the A-against-B comparison assumes an unchanged board.
+
+Say the word and I will add it to the procedure and the two decks, rebuild and push.
+
+Already on GitHub: main there is at 052c122, the same as the local branch. The hook's count was again the stale tracking reference, now refreshed; nothing remains unpushed.
+
+---
+
+### User (2026-10-07 19:37)
+
+add the remount check
+
+---
+
+### Claude (2026-10-07 19:37)
+
+Adding the remount check to the procedure (section 3, with hooks in sections 4, 6, 9 and 10), to both decks, and to the decision log.
+
+Two layout warnings from the new text: the board slide's sixth point is at the column's limit, and the longer spoiler card reaches the bottom margin. Shortening both.
+
+The remount check is in, pushed as 08a02f3 on main, with the three rebuilt files attached above.
+
+**Procedure, section 3, "Remount check".** It first says what a remount can change and why it matters: a tilt of the face shifts every normal; a change of D shifts every plane and would be absorbed into the registered translation unnoticed; a shift within the board's own plane changes nothing. Then three steps after any remount:
+
+1. Repeat the run-out check and the four D measurements; accept at 0.05 mm for both. If D moved, find the cause before going on; if the new value is right, update TOOL_BOARD and note both values and the time, since pose logs before and after would otherwise refer to different frames.
+2. Re-capture the reference pose. The first bootstrap pose is now saved on the controller as a named position; after a remount it is driven to again and captured once under a new id, the boot manifest rebuilt and the bootstrap rerun. The before and after rows were taken at the same robot pose, so the difference between their residuals is the remount. Acceptance is 0.2 degrees and 0.2 mm, the plane-noise figures the plan assumes, marked as placeholders.
+3. Record the remount in the session notes, and always record one that falls between sub-procedures A and B, since their comparison assumes an unchanged board.
+
+**Hooks elsewhere.** Section 4 saves the first boot pose as the reference position. Section 6 says what to do if a remount between the runs cannot be avoided. Section 9 adds remounts to the session notes. Section 10 names a remount that did not go back as a session spoiler.
+
+**Decks.** The build deck's acceptance checklist now says the remount check must pass rather than asserting that the board goes back. The test-procedure deck's board slide gains the check as its sixth point, and the spoilers slide points to it. The first build raised two layout warnings from the longer texts, one at the board column's limit and one spoiler card reaching the bottom margin; I shortened both texts and the checks are clean. Both decks validate and I looked at the rendered slides.
+
+Decision 17 is logged in the review's table.
+
+---
+
+### User (2026-10-07 19:40)
+
+What prompt would you suggest to catch the inconsistency between the slides I pointed to in my previous prompts regarding the target flatness?
+
+---
+
+### Claude (2026-10-07 19:41)
+
+The inconsistency was a mismatch between a requirement table and an options list: the specification allowed two materials, the suppliers list offered three. A review prompt has to make the reviewer build a table of every requirement and then test every other statement about the same item against it. Something like this:
+
+```
+Review the registration procedure and both decks for internal consistency,
+item by item. For each physical item (board, board adapter, run-out fixture,
+sensor mount, each instrument) and each numeric limit (flatness, run-out, D,
+residual thresholds, pose counts, costs, times, disk space):
+
+1. Find the governing statement: the purchase specification (section 1d),
+   the drawing, or the step that sets the limit. Quote it.
+2. Find every other place the same item or limit is mentioned: other
+   procedure sections, appendix A suppliers, appendix D, the deck tables,
+   the deck notes, the figure captions.
+3. Report every mention that adds an option the governing statement does
+   not allow, omits a requirement it imposes, gives a different number, or
+   assigns a check to a different party (supplier versus in-house).
+
+Treat a supplier or candidate list as a list of things that must each meet
+the specification; an option that cannot meet it is an inconsistency, not a
+convenience. Report as a table: item, governing statement, conflicting
+mention with its location, proposed fix. Do not fix anything yet.
+```
+
+Three points about why this works where a general "check the decks for consistency" does not:
+
+- **It names the direction of authority.** The specification governs; everything else is a mention. Without that, a reviewer sees two valid-looking statements and lets both stand. The granite plate was a sensible supplier note on its own; it was wrong only against 1d.
+- **It forces enumeration.** "Every other place the same item is mentioned" makes the reviewer grep rather than skim. The granite option appeared in appendix A and on slide 7 and was absent from 1d and slide 6; only a per-item sweep lines those four up.
+- **It separates reporting from fixing.** You get the table first, decide, and then apply, which is the comment-collection habit of the procedure-docs skill.
+
+If you want this to run without asking, the same prompt belongs in the skill's "Verify before reporting" list as a required pass, run after every rebuild and before the report. Half of it can also be mechanized: the content check already compares the cost figures against the cost script; a similar check could compare the deck's specification tables against the procedure's section 1d tables, so that a word changed in one place fails the build in the other. That would catch numbers and materials, not a stray option in prose; the prompt above is still needed for those.
+
+---
+
+### User (2026-10-07 19:41)
+
+That is, I want a general command to catch similar mistakes, not a specific one.
+
+---
+
+### Claude (2026-10-07 19:41)
+
+A general one has to be about the structure of the mistake, not the subject. The mistake was a derived statement drifting from its governing statement, across documents that describe the same thing at different lengths. A command that catches that class:
+
+```
+Consistency pass. The documents listed below describe one thing at
+different lengths: a full specification and one or more derived summaries
+(decks, appendices, READMEs, captions, notes). The specification governs;
+every derived document must agree with it.
+
+Do this:
+1. From the governing document, extract every requirement, limit, option
+   set, number, named party and sequence of steps. Give each an identifier.
+2. Walk every derived document and attach each of its statements to the
+   requirement it restates. Flag any statement that cannot be attached.
+3. For each attached pair, report a conflict if the derived statement
+   adds an option the governing one excludes, drops a condition it imposes,
+   changes a number or unit, names a different party for an action, reorders
+   steps, or states as certain what the governing text marks as provisional.
+4. Treat lists of options or candidates as claims that each entry meets the
+   requirement; an entry that cannot is a conflict, not a convenience.
+5. Where the governing document is itself silent, say so instead of
+   choosing a side.
+
+Report as a table: requirement id, governing text, conflicting text with
+its location, kind of conflict, proposed fix. Report only; do not edit.
+
+Governing document: <path>
+Derived documents: <paths>
+```
+
+Two things make it general. It never names an item or a number, so it applies to the registration procedure and its decks, the stage-1 procedure and its decks, or any spec with summaries. And it fixes the asymmetry of authority once, so the reviewer never has to decide which of two plausible sentences is right.
+
+Three refinements worth having:
+
+- **Make it a slash command** so the paths are the only thing you type. The skill-creator skill can package the text above as a skill with two arguments, and the procedure-docs skill's "Verify before reporting" list can require running it after every rebuild.
+- **Name the derived documents explicitly, including notes and captions.** Speaker notes and figure captions are where restatements hide; a reviewer told to check "the deck" reads the slides and stops.
+- **Expect false positives in step 2.** A derived document says things the specification does not, by design: a rationale, a tip, a supplier's address. The "cannot be attached" flags are for you to skim, not to fix; the real findings are in step 3.
+
+---
+
+### User (2026-10-07 19:42)
+
+package that as a slash command with skill-creator
+
+---
+
+### Claude (2026-10-07 19:45)
+
+Eval cases are ready. Launching all six runs now, three with the skill and three without, each with a Sonnet subagent.
+
+The six runs are in progress; assertions for all three cases are written. I'll grade and assemble the review when they finish.
+
+Two of six runs are back; waiting for the remaining four before grading. Nothing else is needed until they arrive.
+
+Three runs are back. Notably, the run without the skill on the real case did not find the granite conflict: it compared the suppliers slide with appendix A, which agreed since both carried granite, and never tested either against the specification in section 1d. That is the failure the skill is designed to prevent. I'll record timings as the notifications arrive and grade when all six are in.
+
+Four of six runs are in. Waiting on the two stage-1 runs before grading.
+
+The stage-1 baseline is in; its findings on the stage-1 decks look real (the "~2 h robot time" label, the Rothbucher sphere offered without its limitation, "any table"). One run remains. I'll record the timing when its notification arrives, then grade all six.
+
+The first evaluation round is done. The review page is attached above: the "Outputs" tab shows each test case's report with and without the skill, side by side, and the "Benchmark" tab has the numbers.
+
+**What was tested.** Three cases, each run by a fresh Sonnet subagent with the skill and once more without it, given the same documents and the same request:
+
+- **Granite regression.** The procedure and build-deck content as they were before you spotted the granite plate, recovered from git history. The known answer is the granite conflict.
+- **Planted synthetic.** A short inspection specification and a one-page shop summary in which I planted one conflict of each kind: an added material, a changed torque, a dropped "after bolting down", a reordered wait, the supplier's report used as acceptance, a placeholder limit stated as settled, plus two harmless additions that must not be reported.
+- **Stage-1 exploratory.** The stage-1 procedure and its two deck content files, with no known answer.
+
+**Results.**
+
+| Case | With skill | Without skill |
+|---|---|---|
+| Granite regression | 5 of 5 assertions | 2 of 5 |
+| Planted synthetic | 8 of 8 | 8 of 8 |
+| Stage-1 exploratory | 4 of 4 | 4 of 4 |
+
+The real case is the one that discriminates. Without the skill, the reviewer compared the suppliers slide with appendix A, found them in agreement, and never tested either against section 1d; its report says "the whole supplier slide matches appendix A". With the skill, granite is conflict number one, with both locations, and the procedure's own self-contradiction between 1d and appendix A is reported as a gap with the choice left to you. The synthetic case turned out too easy: both reviewers found all six plants, so it tells us nothing and I would replace it with a harder one in the next round. On the stage-1 set the skill's report found eleven conflicts to the baseline's seven, including one the baseline missed: the deck lists "matrix" as a rotation form the stage-1 pose log does not accept.
+
+**Cost.** The skill's runs used about 12 percent more tokens and took longer, mostly from reading every speaker note and quoting both sides of each finding.
+
+**Side findings worth your attention.** Both stage-1 reviewers and the registration reviewers surfaced real inconsistencies in the current documents, not just the planted ones: a speaker note saying D goes in the pose log, a note calling the adapter "the one machined part", "any table" against "non-magnetic table", the plan tool's help text defining azimuth differently from section 5, and the help text calling D "the plate thickness". For stage 1: the "~2 h robot time" label, the Rothbucher sphere listed without its limitation, and three session-notes items dropped from the deliverables slide. I have logged these as a follow-up task and will not touch them until the skill work is finished, unless you say otherwise.
+
+**One change already made.** Both skill runs complained that the text extractor wrote its output next to the input files. It now writes to a temporary folder it names, never beside the inputs.
+
+Look through the review page and leave comments where a report falls short, then send me the feedback file or just tell me here. If you are satisfied, say so and I will package the skill, commit it, and send the installable file.
+
+---
+
+### User (2026-10-07 19:54)
+
+package the skill and fix the side findings
+
+---
+
+### Claude (2026-10-07 19:54)
+
+Starting both. First the azimuth question, since the fix depends on which convention the code actually implements.
+
+The skill is packaged and attached above, and the registration-side fixes are pushed as 054a40b on main. The stage-1 fixes are being applied in the other repository by a subagent; I'll review its work, commit it there, and report when it returns.
+
+Both jobs are done.
+
+**The skill.** The installable file was attached in my previous message; the same files live in the repository under .claude/skills/consistency-pass, pushed as 054a40b on main, so every cloud session on plane_plane_registration has `/consistency-pass` available. Install the file into your profile with the Save skill button if you want it in every project. Its one post-evaluation change: the text extractor now writes to a temporary folder it names, never beside the documents under review.
+
+**Side findings, registration repository** (same commit): the plan tool's help and docstring now say which board edge each azimuth tilts toward the sensor, matching section 5; the target-offset option describes D as the flange-face-to-front-face distance rather than a plate thickness, in both tools, the core docstring and the design document; appendix A gives the feeler-gauge price so its straightedge line reconciles with 1c. In the build deck: D goes in the session notes rather than the pose log, the adapter is "the one part that needs a drawing", the base plate holds on a non-magnetic table, the straightedge is grade 0 or better, and the sensor mount leaves the "built" table and is named as in hand in the caption. The procedure and deck were rebuilt; every check and validation passes; I looked at the changed slides; the Python tests pass at 65.
+
+**Side findings, stage-1 repository,** committed as 76fd47e on claude/vibrant-bardeen-160g78 and pushed. The "~2 h" stat is now session time, not robot time. The stock reference spheres carry appendix A's limitations on the slide, in short form, with the full wording in the notes. "No pre-tapped sphere exists" became "none found stocked". The base plate holds on a non-magnetic table. Sphere B's wall is "at least 6 mm; ceramic as an alternative". The nest balls are "bonded" on slide and notes alike, as drawing SC1-06 says. The deliverables slide lists the TCP routine errors, board dimensions, fixture changes with times and the run-out fixture photo. And the procedure's section 7 now admits the matrix rotation type with nine values, which the manifest tool already accepted; the deck's note about four values says nine for that form. Content check, validation and renders pass; I looked at the changed slides.
+
+Two things to know. The stage-1 photos checklist item was shortened to fit its slide and lost "a phone camera is fine", which the notes still carry. And the stage-1 decks have titles that wrap to two lines in the LibreOffice render, a pre-existing condition from the other session's build that I left alone; in PowerPoint with the real fonts they may fit, as the registration decks' trimmed titles do.
+
+---
+
+### User (2026-10-08 21:37)
+
+Do we need to run any more simulations before we can distribute the procedure documents (all 3)?
+
+---
+
+### Claude (2026-10-08 21:38)
+
+Let me check two things before answering: what the existing simulation tool covers end to end, and one numeric claim in the procedure that was never computed with the code.
+
+Short answer: no further simulation is required to distribute the three documents, but one is worth running before the real session, and one claim in the procedure turned out to be wrong when I checked it with the code just now.
+
+**What the documents' numbers rest on.**
+
+| Figure in the documents | Basis | Status |
+|---|---|---|
+| Registration solver, rigid and similarity, outlier rejection | 34 numerical checks of the specification; 34 C++ tests; 65 Python tests on synthetic sessions with clutter and fly-aways | verified |
+| Target-plane segmentation, predicted region, border and fly-away handling | Python tests on synthetic captures | verified at small image size only |
+| Predicted registration error of the plan (0.046 degrees, 0.046 mm) | A formula from the normal spread and assumed plane noise of 0.2 degrees and 0.2 mm | assumption stated in the document |
+| Sub-procedure A against B separating constant from random backlash | Simulated with the emulation in the synthetic-session tool | verified for the emulation, not for any robot |
+| Section 8 check thresholds, remount limits, bootstrap limits | Placeholders, marked as such | awaiting real data |
+| Time per pose, session length, disk space | Rough figures, marked as such | not simulable |
+| Robot reach for the plan, clearance of the approach retreat | Needs the robot model | the dry run in section 1f covers it |
+
+**The one thing I would still run,** not for the documents but for the session: a full-scale dress rehearsal through the exact chain the technician will produce. The synthetic-session tool already accepts the plan tool's poses.csv, emulates A and B with backlash, and writes captures, manifest and pose log in the real layout, but it has only been exercised at small image sizes in tests. A run of the default 235-pose plan at 640 by 480 with 5 frames, for both sub-procedures, followed by make_manifest, the check tool and the analysis would show four things the tests do not: that the section 8 thresholds flag nothing on clean synthetic data, that the predicted error from the plan summary is met, how long the tools take on 2,350 frames, and that the folder layout, file names and the pose log format of sections 2 and 7 go through unchanged. It takes compute time rather than any new code, and if it passes it changes nothing in the documents. I would run it before the robot program is written, since a failure there could still alter section 7.
+
+**The claim I corrected.** Section 4 said the six bootstrap poses give a normal spread of "about 0.15". That figure was estimated, never computed. With the code it is 0.197. The procedure and the deck notes now say about 0.2; pushed as d98f91c. This is the kind of figure the dress rehearsal would also have caught, and it is why I would not call the documents final until that run has been made.
+
+**Stage 1.** Its procedure's numbers come from the other session's analysis, which I did not re-verify; the consistency pass found only wording drift, not arithmetic. The same dress-rehearsal argument applies there with its own tools.
+
+If you want the rehearsal run now, say so and I will run it in the background and report the four results.
+
+Already pushed: GitHub's main is at d98f91c, the same as the local branch. The hook's count came from the stale remote-tracking reference, now refreshed. Nothing is unpushed.
+
+---
+
+### User (2026-10-08 21:40)
+
+I'd run the dress rehearsal now.
+
+---
+
+### Claude (2026-10-08 21:41)
+
+Setting up the rehearsal as one reproducible script: plan, six-pose bootstrap, simulated runs A and B at full scale, manifests, checks, analysis, timings. First the constraints: disk space and the simulator's camera options.
+
+The rehearsal is running in the background. Let me check that its first steps went through so a broken step doesn't waste the run.
+
+The plan and the bootstrap stage have passed: the six simulated bootstrap captures gave a normal spread of 0.1975 and recovered the sensor placement to within 0.01 mm, with residuals of 0.003 degrees and 0.007 mm. Sub-procedure A is now rendering its 1,175 frames; I'll report when the whole chain has finished.
+
+The rehearsal ran end to end and surfaced two real gaps, one in the software and one in a claim the procedure makes. Let me confirm what the design intended for held-out poses before fixing anything.
+
+Still trimming one slide card that the layout model says overflows, while the analysis-tool changes run in the background.
+
+Deck is clean again. The remaining piece is the analysis-tool change, which is still running in the background; once it reports, I'll rerun the rehearsal with held-out poses excluded and commit everything together.
+
+The deck change is committed and pushed (251b312). The two remaining uncommitted files are the subagent's in-progress edits to the check tool and its tests; they will be committed with the analysis change when that work reports back.
+
+The tool changes are committed and pushed as 15845b9, and the second full-scale rehearsal is running with them. It takes about twenty minutes; I'll report its verdicts, the held-out check and the comparison when it finishes.
+
+Already pushed: GitHub's main is at 15845b9, the same as the local branch. The hook's count came from the stale tracking reference, now refreshed; nothing is unpushed. The rehearsal is still running in the background.
+
+The second rehearsal confirms the change in behavior: the check now flags 11 of 235 poses as too-small board images instead of mis-attributing one of them to a logging error, and the analysis fits 188 poses and reports the 47 held-out ones separately, within limits for both runs. The residual vector maps and the A-against-B comparison render as intended; the comparison figure shows A's residuals wider than B's with a 0.293 mm relative transform, the constant backlash B absorbed.
+
+One inconsistency remains in the tools: the analysis still fits the too-small poses the check flags, and one of them pushes run A over the maximum-offset limit. The analysis tool is being aligned with the check in the background; then I'll run the rehearsal a third time, keep its results in the repository, and report the final figures.
+
+Committed and pushed as b8e63f8; the tree is clean. The analysis-tool alignment is still running in the background and will be committed with the third rehearsal's results when it reports.
+
+The analysis change is committed and pushed as f02b3e0, with 77 tests passing, and the third rehearsal is running. I'll report its final figures when it completes.
+
+Already pushed: GitHub's main is at f02b3e0, identical to the local branch; the tracking reference is refreshed and nothing is unpushed. The third rehearsal is still running in the background.
 
 ---
 

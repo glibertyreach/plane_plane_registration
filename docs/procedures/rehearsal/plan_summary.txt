@@ -1,0 +1,36 @@
+Registration pose plan
+Sensor-to-base transform: matrix from /tmp/claude-0/-home-user/fd747cf1-d9f9-5dd3-84db-c067a012fbe6/scratchpad/rehearsal3/sensor.json
+Camera: 640 x 480 px, half field 24.9 x 19.2 deg
+Board half size: 100 x 75 mm; lateral grid 3 x 3 at fill 0.5; edge margin 10 px
+Approach pose: retreat 40 mm along the board's -z, rotation 3 deg about the board's x axis
+
+Poses per standoff and tilt:
+  standoff_mm tilt_deg  planned  dropped   kept  held out
+          550      0.0        9        0      9         3
+          550     15.0       36        0     36         9
+          550     30.0       36        8     28         4
+          750      0.0        9        0      9         1
+          750     15.0       36        0     36         9
+          750     30.0       36        0     36         5
+          950      0.0        9        0      9         0
+          950     15.0       36        0     36         7
+          950     30.0       36        0     36         9
+  8 poses were dropped because a board corner would come within 10 px of the image edge; use a smaller --lateral-fill, smaller tilts, a smaller board or larger standoffs to keep more of them.
+
+Quality of the plan, all planned poses (235 poses):
+  normal spread      0.2850  (registration minimum 0.05)
+  similarity spread  0.1306  (registration minimum 0.01)
+  predicted rotation RMS error     0.0458 deg
+  predicted translation RMS error  0.0458 mm
+  (assumed noise: normals 0.2 deg, offsets 0.2 mm; an order of magnitude, good to a factor of about two)
+
+Quality of the plan, poses not held out (188 poses):
+  normal spread      0.2822  (registration minimum 0.05)
+  similarity spread  0.1289  (registration minimum 0.01)
+  predicted rotation RMS error     0.0517 deg
+  predicted translation RMS error  0.0517 mm
+  (assumed noise: normals 0.2 deg, offsets 0.2 mm; an order of magnitude, good to a factor of about two)
+
+Largest incidence angle (board normal against the line of sight): 30.0 deg
+Total: 235 poses, 47 tagged held out (seed 0).
+Both sub-procedures together: 2 x 235 poses = 470 pose visits; x 5 frames = 2350 capture files.

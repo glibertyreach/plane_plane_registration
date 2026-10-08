@@ -3,12 +3,12 @@
   {
    "step": "plan",
    "exit": 0,
-   "seconds": 2.8
+   "seconds": 2.7
   },
   {
    "step": "simulate boot",
    "exit": 0,
-   "seconds": 2.0
+   "seconds": 2.1
   },
   {
    "step": "make_manifest boot",
@@ -23,7 +23,7 @@
   {
    "step": "simulate A",
    "exit": 0,
-   "seconds": 316.8
+   "seconds": 314.3
   },
   {
    "step": "make_manifest A",
@@ -33,32 +33,32 @@
   {
    "step": "check A",
    "exit": 1,
-   "seconds": 54.7
+   "seconds": 54.8
   },
   {
    "step": "register A",
-   "exit": 1,
-   "seconds": 170.3
+   "exit": 0,
+   "seconds": 170.6
   },
   {
    "step": "simulate B",
    "exit": 0,
-   "seconds": 313.8
+   "seconds": 317.8
   },
   {
    "step": "make_manifest B",
    "exit": 0,
-   "seconds": 0.6
+   "seconds": 0.5
   },
   {
    "step": "check B",
-   "exit": 0,
-   "seconds": 54.9
+   "exit": 1,
+   "seconds": 55.7
   },
   {
    "step": "register B",
    "exit": 0,
-   "seconds": 171.2
+   "seconds": 170.7
   },
   {
    "step": "compare",
@@ -68,7 +68,7 @@
   {
    "step": "report",
    "exit": 0,
-   "seconds": 0.4
+   "seconds": 0.5
   }
  ],
  "capture_gigabytes": {
