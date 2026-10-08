@@ -544,6 +544,7 @@ document where they differ.
 | 15 | (procedure) Decks | Two decks as in stage 1: procurement and mechanical build; test procedure and robot program. | `docs/presentations/`. |
 | 16 | (procedure) Decision log | New decisions continue this table from row 11, rather than a separate analysis document. | This table. |
 | 17 | (procedure, 7 Oct 2026) Remount check | A remount is verified, not assumed: repeat the run-out and D checks, and re-capture a saved reference pose so the bootstrap shows the before-and-after residuals; limits 0.05 mm, 0.2 degrees and 0.2 mm as placeholders. | Procedure section 3 (remount check), with hooks in sections 4, 6, 9 and 10; both decks. |
+| 18 | (rehearsal, 8 Oct 2026) Dress rehearsal findings | A full-scale synthetic run of the procedure's chain (plan, bootstrap, A and B with backlash, manifests, checks, analysis) passed end to end and found two gaps: the analysis did not keep held-out poses out of the fit as the procedure promised, and a pose at the far standoff and largest tilt read only 725 pixels and was flagged with the wrong advice. | `--plan` on the register tool excludes held-out poses and reports their residuals; the check tool flags a small board image with advice to drop the pose; `docs/procedures/build/dress_rehearsal.py` reproduces the run; results in `docs/procedures/rehearsal/`. |
 
 ---
 

@@ -1,0 +1,81 @@
+{
+ "steps": [
+  {
+   "step": "plan",
+   "exit": 0,
+   "seconds": 2.8
+  },
+  {
+   "step": "simulate boot",
+   "exit": 0,
+   "seconds": 2.0
+  },
+  {
+   "step": "make_manifest boot",
+   "exit": 0,
+   "seconds": 0.4
+  },
+  {
+   "step": "bootstrap",
+   "exit": 0,
+   "seconds": 2.9
+  },
+  {
+   "step": "simulate A",
+   "exit": 0,
+   "seconds": 316.8
+  },
+  {
+   "step": "make_manifest A",
+   "exit": 0,
+   "seconds": 0.5
+  },
+  {
+   "step": "check A",
+   "exit": 1,
+   "seconds": 54.7
+  },
+  {
+   "step": "register A",
+   "exit": 1,
+   "seconds": 170.3
+  },
+  {
+   "step": "simulate B",
+   "exit": 0,
+   "seconds": 313.8
+  },
+  {
+   "step": "make_manifest B",
+   "exit": 0,
+   "seconds": 0.6
+  },
+  {
+   "step": "check B",
+   "exit": 0,
+   "seconds": 54.9
+  },
+  {
+   "step": "register B",
+   "exit": 0,
+   "seconds": 171.2
+  },
+  {
+   "step": "compare",
+   "exit": 0,
+   "seconds": 1.1
+  },
+  {
+   "step": "report",
+   "exit": 0,
+   "seconds": 0.4
+  }
+ ],
+ "capture_gigabytes": {
+  "captures_A": 2.84,
+  "captures_B": 2.84
+ },
+ "frames_per_pose": 5,
+ "backlash_deg": 0.03,
+ "backlash_mm": 0.1
+}

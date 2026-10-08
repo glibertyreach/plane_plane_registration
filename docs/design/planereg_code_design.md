@@ -173,7 +173,7 @@ board fills so much of the field that most tilted poses leave the image), tilts
 tilt 0 is planned once per lateral position), `--lateral-fill` (default 0.5: fraction
 of the half field covered by board centers at each standoff), `--lateral-positions`
 (default 3 x 3 grid), `--edge-margin-px` (default 10), `--approach-retreat-mm`
-(default 40), `--approach-rotation-deg` (default 3), `--holdout-fraction` (0.2),
+(default 40), `--approach-rotation-deg` (default 3), `--holdout-fraction` (0.2; the analysis tool reads the plan with `--plan` and keeps the tagged poses out of the fit, reporting their residuals as the independent check),
 `--seed`, `--target-pose-count` (optional; scales the lateral grid), `--noise-normal-deg`
 (0.2) and `--noise-offset-mm` (0.2) for the error prediction, `--out DIR`.
 

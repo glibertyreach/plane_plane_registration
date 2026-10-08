@@ -408,8 +408,10 @@ sensor and tilted by 0, 15 and 30 degrees, the tilted poses at the four azimuths
 (top, right, bottom and left edge toward the sensor): 9 orientations at each of 27
 positions. Tilted boards that would leave the field of view are dropped
 automatically. About 20 percent of the poses are marked as *held out* in
-`poses.csv` (column `holdout`, value 1): capture them like all the others; the
-software keeps them aside for checking the result instead of fitting with them.
+`poses.csv` (column `holdout`, value 1): capture them like all the others. The
+analysis reads `poses.csv` to know which they are, fits the registration without
+them, and reports their residuals as an independent check of the result; that is
+why `plan/poses.csv` is a deliverable (section 9).
 
 {{PLAN_PARAGRAPH}}
 
@@ -619,6 +621,10 @@ words are those of section 4):
   exposure, or the board was outside the field.
 - Board touching the image border: the board is partly out of view; the pose is
   unusable, re-plan it slightly inward.
+- Board image too small (fewer than 1,000 pixels found): the pose is at the limit
+  of what the sensor can read, usually the far standoff at the largest tilt. Its
+  plane is noisy, so the residual flags are not raised for it. Do not re-capture it;
+  drop it from the plan. The 1,000 is a placeholder until real sessions set it.
 - Segmentation failed: the software could not find a flat surface of the board's
   size facing the sensor where the pose says it should be; the pose was copied
   wrongly, or something flat is closer to the sensor than the board (a cable, a

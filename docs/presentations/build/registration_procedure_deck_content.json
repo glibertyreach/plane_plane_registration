@@ -390,9 +390,9 @@
    "title": "Check each capture set before the next run",
    "cards": [
     {
-     "head": "Board not found or cut off",
-     "flag": "segmentation failed; valid fraction below 50 percent; mask at the border",
-     "text": "Pose copied wrongly, something flat closer than the board, the board outside the field, or exposure"
+     "head": "Board not found, cut off or too small",
+     "flag": "segmentation failed; valid fraction below 50 percent; mask at the border; under 1,000 pixels",
+     "text": "Pose copied wrongly, something flat closer than the board, the board outside the field, or exposure. Too small: the pose is at the sensor's limit; drop it, do not re-capture"
     },
     {
      "head": "Plane residual",
@@ -411,7 +411,7 @@
     }
    ],
    "caption": "Re-capture a flagged pose under a new id, for example b_z0650_t24_a090_05r; never delete lines from the log. Exit code 0 means nothing flagged.",
-   "notes": "The check tool prints one line per pose and a verdict, and writes a JSON report; its exit code is 0 when nothing is flagged, 1 when something is, and 2 when it cannot read the manifest. It runs on each folder as soon as its captures are complete, while the robot and the board are still set up, because that is when a flagged pose can be re-captured. It also reports the normal spread of the set, which should not fall below 0.05 with the plan's defaults. Section 8 of the procedure lists every flag and what it means. The thresholds are placeholders until the first real session sets them."
+   "notes": "The check tool prints one line per pose and a verdict, and writes a JSON report; its exit code is 0 when nothing is flagged, 1 when something is, and 2 when it cannot read the manifest. It runs on each folder as soon as its captures are complete, while the robot and the board are still set up, because that is when a flagged pose can be re-captured. It also reports the normal spread of the set, which should not fall below 0.05 with the plan's defaults. Section 8 of the procedure lists every flag and what it means. The thresholds are placeholders until the first real session sets them. A board image of fewer than 1,000 pixels, typically the far standoff at the largest tilt, gives a noisy plane; the check flags it as too small and suppresses its residual flags, and the right response is to drop the pose from the plan rather than re-capture it. The 1,000 is a placeholder."
   },
   {
    "id": "spoilers",

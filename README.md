@@ -35,7 +35,9 @@ intrinsics.
   run-out fixture, preparation); appendix A lists suppliers, B the tools' help,
   C the installation, D the board-adapter drawing SC1-05, a copy of the stage-1
   drawing kept in `docs/procedures/drawings/`. Cost figures come from one script,
-  `docs/procedures/build/costs.py`.
+  `docs/procedures/build/costs.py`. `docs/procedures/build/dress_rehearsal.py` runs
+  the whole chain of the procedure on a synthetic sensor and robot at full scale;
+  the results of the last run are in `docs/procedures/rehearsal/`.
 - `docs/presentations/`: two decks built from content files by the generator in
   `build/` (see its README): procurement and mechanical build, and the test
   procedure and robot program.

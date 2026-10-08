@@ -1,0 +1,93 @@
+{
+  "matrix": [
+    0.9999999968954228,
+    7.83159524315321e-05,
+    -8.704335099450565e-06,
+    800.0136572577668,
+    7.831586672430161e-05,
+    -0.9999999968848363,
+    -9.84640985488861e-06,
+    0.0043700001553431496,
+    -8.705106203316266e-06,
+    9.845728137228615e-06,
+    -0.9999999999136411,
+    1199.9967519473446,
+    0.0,
+    0.0,
+    0.0,
+    1.0
+  ],
+  "status": "Success",
+  "message": "registration succeeded",
+  "normal_spread": 0.19746542181734925,
+  "rms_normal_residual_deg": 0.0027344666919086303,
+  "rms_offset_residual_mm": 0.007031672826140199,
+  "poses": [
+    {
+      "pose_id": "boot01",
+      "method": "closest_large_plane",
+      "pixels": 34520,
+      "plane_rms_mm": 0.04308509124650758,
+      "normal_residual_deg": 0.001198861633759935,
+      "offset_residual_mm": -0.004201120681614157,
+      "used": true,
+      "touches_border": false,
+      "message": ""
+    },
+    {
+      "pose_id": "boot02",
+      "method": "closest_large_plane",
+      "pixels": 29257,
+      "plane_rms_mm": 0.04204768706795539,
+      "normal_residual_deg": 0.0037233955510826986,
+      "offset_residual_mm": 0.009572528215812781,
+      "used": true,
+      "touches_border": false,
+      "message": ""
+    },
+    {
+      "pose_id": "boot03",
+      "method": "closest_large_plane",
+      "pixels": 30944,
+      "plane_rms_mm": 0.042226940730970004,
+      "normal_residual_deg": 0.004185567241547635,
+      "offset_residual_mm": 0.009572528216040155,
+      "used": true,
+      "touches_border": false,
+      "message": ""
+    },
+    {
+      "pose_id": "boot04",
+      "method": "closest_large_plane",
+      "pixels": 30748,
+      "plane_rms_mm": 0.04358493640814502,
+      "normal_residual_deg": 0.0008922376675880356,
+      "offset_residual_mm": -0.002475056168464107,
+      "used": true,
+      "touches_border": false,
+      "message": ""
+    },
+    {
+      "pose_id": "boot05",
+      "method": "closest_large_plane",
+      "pixels": 29918,
+      "plane_rms_mm": 0.04260431502268929,
+      "normal_residual_deg": 0.0021229720952657726,
+      "offset_residual_mm": -0.0024750561682367334,
+      "used": true,
+      "touches_border": false,
+      "message": ""
+    },
+    {
+      "pose_id": "boot06",
+      "method": "closest_large_plane",
+      "pixels": 15878,
+      "plane_rms_mm": 0.08353476691492356,
+      "normal_residual_deg": 0.002596311457041634,
+      "offset_residual_mm": -0.009137763537069077,
+      "used": true,
+      "touches_border": false,
+      "message": ""
+    }
+  ]
+}
