@@ -215,7 +215,9 @@ Inputs: `--manifest`, `--sensor-in-base PATH` (optional; enables the predicted r
 `--pose-log PATH` (optional; for the joint-sign report), thresholds (segmentation RMS
 warn 1.0 mm, min valid fraction 0.5, border margin 4 px, normal residual warn 1.0
 deg, offset residual warn 1.0 mm), `--target-offset-mm D` as in the bootstrap,
-`--out PATH`.
+`--min-mask-pixels N` (default 1000: a board image with fewer segmented pixels is
+flagged as too small for a reliable plane and its residual flags are suppressed; the
+advice is to drop the pose from the plan), `--out PATH`.
 
 Per pose: frames, valid fraction, segmentation method and pixels, plane RMS, border
 contact of the mask, flags (unreadable, low valid, border, segmentation failed, plane
@@ -230,6 +232,7 @@ columns exist. Table, verdict line, JSON report, exit codes as sphcal.
 
 `python3 -m planereg.analysis.register --manifest PATH --out DIR [--sensor-in-base PATH]
 [--model rigid|similarity|both] [--outlier-rounds N] [--target-offset-mm D]
+[--plan poses.csv]
 [--figures/--no-figures]`
 
 Two passes: pass 1 segments every pose by the closest large plane (or by prediction

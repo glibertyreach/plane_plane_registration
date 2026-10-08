@@ -45,6 +45,12 @@ BOARD_MASK_SIZE_PX = (40, 60)
 """Rows and columns of the synthetic board mask of the fly-away test."""
 IMAGE_DEPTH_MM = 600.0
 """Depth of the board in the clutter test."""
+HELD_OUT_EVERY = 4
+"""Every fourth pose of the holdout session is tagged held out in its plan (6 of 24)."""
+HELD_OUT_RMS_NORMAL_TOLERANCE_DEG = 0.1
+HELD_OUT_RMS_OFFSET_TOLERANCE_MM = 0.5
+"""On clean synthetic data the held-out poses agree with the transform fitted without them to within the noise of
+the segmentation (the fit's own residuals are of this size)."""
 FACING_ROTATION = np.diag([1.0, -1.0, -1.0])
 """Board-to-sensor rotation of a board that faces the sensor head on (its z axis points back at the sensor)."""
 
@@ -396,6 +402,184 @@ def test_report_contains_the_transform_the_verdict_and_the_comparison(analysis_c
 # ---------------------------------------------------------------------------
 # Command lines
 # ---------------------------------------------------------------------------
+# ---------------------------------------------------------------------------
+# Held-out poses
+# ---------------------------------------------------------------------------
+def write_plan_csv(path: Path, truth: dict, held_out_ids: set[str], omit: tuple[str, ...] = (),
+                   extra_rows: tuple[tuple[str, int], ...] = (), holdout_column: bool = True) -> Path:
+    """A plan CSV of the truth's poses in the capture tools' layout (the simulator's plan columns, then
+    ``standoff_mm`` and the ``holdout`` tag), with the poses of ``omit`` left out and ``extra_rows``
+    (pose id, tag) added for planned poses that were never captured."""
+    columns = ([simulate.PLAN_POSE_ID_COLUMN, "kind", "half_width_mm", "half_height_mm"]
+               + list(simulate.PLAN_POSITION_COLUMNS) + list(simulate.PLAN_ROTATION_COLUMNS) + ["standoff_mm"]
+               + (["holdout"] if holdout_column else []))
+    lines = [",".join(columns)]
+    for pose in truth["poses"]:
+        if pose["pose_id"] in omit:
+            continue
+        matrix = np.array(pose["reported_pose"]).reshape(4, 4)
+        cells = [pose["pose_id"], "board", *map(str, pose["half_size_mm"]), *map(str, matrix[:3, 3]),
+                 *map(str, matrix[:3, :3].reshape(-1)), "450"]
+        lines.append(",".join(cells + ([str(int(pose["pose_id"] in held_out_ids))] if holdout_column else [])))
+    template = lines[1].split(",")
+    for pose_id, tag in extra_rows:
+        lines.append(",".join([pose_id, *template[1:-1], str(tag)]))
+    path.write_text("\n".join(lines), encoding="utf-8")
+    return path
+
+
+@pytest.fixture(scope="module")
+def analysis_holdout(tmp_path_factory):
+    """A default-plan session on the small camera whose plan tags every HELD_OUT_EVERY-th pose as held out, and
+    its registration (both models) with that plan."""
+    root = tmp_path_factory.mktemp("analysis_holdout")
+    first = make_session(root / "first", "--frames", "1", "--seed", "6", "--image-size", *map(str, SMALL_IMAGE_SIZE))
+    held_out = {pose["pose_id"] for pose in first["poses"][HELD_OUT_EVERY - 1::HELD_OUT_EVERY]}
+    plan = write_plan_csv(root / "poses.csv", first, held_out)
+    rough = write_rough(first, root / "rough.json")
+    # Replay the plan so that the session is made from a poses.csv with the plan's extra columns.
+    truth = make_session(root / "session", "--plan", str(plan), "--sensor-to-base", str(rough), "--frames", "1",
+                         "--seed", "6", "--image-size", *map(str, SMALL_IMAGE_SIZE))
+    manifest = root / "session" / "manifest.json"
+    exit_code = register.main(["--manifest", str(manifest), "--plan", str(plan), "--out", str(root / "reg"),
+                               "--no-figures", "--truth", str(root / "session" / "truth.json")])
+    document = json.loads((root / "reg" / "registration.json").read_text(encoding="utf-8"))
+    return {"root": root, "truth": truth, "plan": plan, "manifest": manifest, "held_out": held_out,
+            "exit": exit_code, "document": document}
+
+
+def test_register_with_a_plan_fits_only_the_poses_that_are_not_held_out(analysis_holdout):
+    document, truth, held_out = analysis_holdout["document"], analysis_holdout["truth"], analysis_holdout["held_out"]
+    pose_ids = [pose["pose_id"] for pose in truth["poses"]]
+    assert held_out and len(held_out) < len(pose_ids)
+    assert analysis_holdout["exit"] == register.EXIT_OK
+    for model in document["model_order"]:
+        for pass_name in (register.PASS_ONE, register.PASS_TWO):
+            block = document["models"][model][pass_name]
+            # The fit saw exactly the poses that are not held out; the entries still list every pose.
+            assert block["poses_total"] == len(pose_ids)
+            assert block["poses_used"] == len(pose_ids) - len(held_out)
+            assert [p["pose_id"] for p in block["poses"]] == pose_ids
+            for pose in block["poses"]:
+                assert pose["held_out"] == (pose["pose_id"] in held_out)
+                assert pose["used"] == (pose["pose_id"] not in held_out)
+            assert block["rejected_pose_ids"] == []
+            # The held-out block lists exactly the tagged poses, with finite residuals.
+            section = block["held_out"]
+            assert section["count"] == len(held_out) and section["unevaluated_pose_ids"] == []
+            assert {p["pose_id"] for p in section["poses"]} == held_out
+            for entry in section["poses"]:
+                assert np.isfinite(entry["normal_residual_deg"]) and np.isfinite(entry["offset_residual_mm"])
+            assert 0.0 <= section["rms_normal_residual_deg"] < HELD_OUT_RMS_NORMAL_TOLERANCE_DEG
+            assert 0.0 <= section["rms_offset_residual_mm"] < HELD_OUT_RMS_OFFSET_TOLERANCE_MM
+            assert section["max_normal_residual_deg"] >= section["rms_normal_residual_deg"]
+            assert section["max_offset_residual_mm"] >= section["rms_offset_residual_mm"]
+            assert section["held_out_within_limits"] is True
+            # The per-pose entries of a held-out pose carry the same residuals as the block.
+            by_id = {p["pose_id"]: p for p in block["poses"]}
+            for entry in section["poses"]:
+                assert by_id[entry["pose_id"]]["normal_residual_deg"] == entry["normal_residual_deg"]
+                assert by_id[entry["pose_id"]]["offset_residual_mm"] == entry["offset_residual_mm"]
+    rotation, translation = final_errors(document["models"]["rigid"][register.PASS_TWO], truth)
+    assert rotation < ROTATION_TOLERANCE_DEG and translation < TRANSLATION_TOLERANCE_MM
+    assert document["plan"]["poses_not_captured"] == [] and document["plan"]["manifest_poses_not_in_plan"] == []
+
+
+def test_register_without_a_plan_holds_nothing_out(analysis_holdout, tmp_path):
+    assert register.main(["--manifest", str(analysis_holdout["manifest"]), "--out", str(tmp_path), "--model", "rigid",
+                          "--no-figures"]) == register.EXIT_OK
+    document = json.loads((tmp_path / "registration.json").read_text(encoding="utf-8"))
+    block = document["models"]["rigid"][register.PASS_TWO]
+    assert block["held_out"] is None and document["plan"] is None
+    assert block["poses_used"] == block["poses_total"] and not any(p["held_out"] for p in block["poses"])
+
+
+def test_register_prints_a_held_out_line_per_model_and_exits_one_when_they_exceed_the_limits(analysis_holdout, tmp_path,
+                                                                                                capsys):
+    arguments = ["--manifest", str(analysis_holdout["manifest"]), "--plan", str(analysis_holdout["plan"]),
+                 "--out", str(tmp_path), "--no-figures"]
+    assert register.main(arguments) == register.EXIT_OK
+    lines = [line for line in capsys.readouterr().out.splitlines() if "held out:" in line]
+    assert len(lines) == 2 and lines[0].startswith("rigid") and lines[1].startswith("similarity")
+    count = len(analysis_holdout["held_out"])
+    assert all(f"held out: {count} poses, RMS normal " in line and line.endswith("within limits") for line in lines)
+    # A limit tighter than the segmentation noise makes the held-out poses (and the fit) exceed it.
+    assert register.main(arguments + ["--max-rms-offset-mm", "1e-9"]) == register.EXIT_FLAGGED
+    assert all(line.endswith("EXCEEDS") for line in capsys.readouterr().out.splitlines() if "held out:" in line)
+    document = json.loads((tmp_path / "registration.json").read_text(encoding="utf-8"))
+    assert document["models"]["rigid"][register.PASS_TWO]["held_out"]["held_out_within_limits"] is False
+
+
+def test_register_fits_a_manifest_pose_missing_from_the_plan_and_warns(analysis_holdout, tmp_path, capsys):
+    truth, held_out = analysis_holdout["truth"], analysis_holdout["held_out"]
+    pose_ids = [pose["pose_id"] for pose in truth["poses"]]
+    recaptured = next(pose_id for pose_id in pose_ids if pose_id not in held_out)       # not in the plan
+    never_captured = "planned_but_never_captured"                                        # not in the manifest
+    plan = write_plan_csv(tmp_path / "poses.csv", truth, held_out, omit=(recaptured,), extra_rows=((never_captured, 1),))
+    assert register.main(["--manifest", str(analysis_holdout["manifest"]), "--plan", str(plan),
+                          "--out", str(tmp_path / "reg"), "--model", "rigid", "--no-figures"]) == register.EXIT_OK
+    printed = capsys.readouterr().out
+    assert f"WARNING: 1 of {len(pose_ids)} plan poses were not captured (1 of them tagged held out): {never_captured}" \
+        in printed
+    assert f"WARNING: 1 manifest pose(s) are not in the plan (re-captures?) and are treated as not held out: " \
+           f"{recaptured}" in printed
+    document = json.loads((tmp_path / "reg" / "registration.json").read_text(encoding="utf-8"))
+    assert document["plan"]["poses_not_captured"] == [never_captured]
+    assert document["plan"]["manifest_poses_not_in_plan"] == [recaptured]
+    for pass_name in (register.PASS_ONE, register.PASS_TWO):
+        block = document["models"]["rigid"][pass_name]
+        by_id = {p["pose_id"]: p for p in block["poses"]}
+        assert by_id[recaptured]["used"] and not by_id[recaptured]["held_out"]
+        assert block["poses_used"] == len(pose_ids) - len(held_out)
+        assert {p["pose_id"] for p in block["held_out"]["poses"]} == held_out
+
+
+def test_register_rejects_a_plan_it_cannot_use(analysis_holdout, tmp_path, capsys):
+    base = ["--manifest", str(analysis_holdout["manifest"]), "--out", str(tmp_path / "reg"), "--no-figures"]
+    truth = analysis_holdout["truth"]
+    no_column = write_plan_csv(tmp_path / "no_column.csv", truth, set(), holdout_column=False)
+    assert register.main(base + ["--plan", str(no_column)]) == register.EXIT_INPUT_ERROR
+    assert "no 'holdout' column" in capsys.readouterr().err
+    bad_tag = tmp_path / "bad_tag.csv"
+    lines = analysis_holdout["plan"].read_text(encoding="utf-8").splitlines()
+    lines[1] = lines[1].rsplit(",", 1)[0] + ",yes"                    # the holdout cell of the first pose
+    bad_tag.write_text("\n".join(lines), encoding="utf-8")
+    assert register.main(base + ["--plan", str(bad_tag)]) == register.EXIT_INPUT_ERROR
+    assert "expected 1 (held out) or 0" in capsys.readouterr().err
+    assert register.main(base + ["--plan", str(tmp_path / "missing.csv")]) == register.EXIT_INPUT_ERROR
+    assert "cannot read the plan" in capsys.readouterr().err
+
+
+def test_report_and_compare_carry_the_held_out_poses(analysis_holdout, tmp_path):
+    root, held_out = analysis_holdout["root"], analysis_holdout["held_out"]
+    registration = root / "reg" / "registration.json"
+    assert compare.main(["--registration-a", str(registration), "--registration-b", str(registration),
+                         "--out", str(tmp_path / "cmp"), "--model", "rigid"]) == compare.EXIT_OK
+    comparison = json.loads((tmp_path / "cmp" / "comparison.json").read_text(encoding="utf-8"))
+    section = analysis_holdout["document"]["models"]["rigid"][register.PASS_TWO]["held_out"]
+    assert comparison["models"]["rigid"]["held_out"]["count"] == {"a": len(held_out), "b": len(held_out)}
+    assert comparison["models"]["rigid"]["held_out"]["rms_offset_residual_mm"]["a"] == section["rms_offset_residual_mm"]
+    assert report.main(["--registration", str(registration), "--comparison", str(tmp_path / "cmp" / "comparison.json"),
+                        "--out", str(tmp_path / "report.md")]) == report.EXIT_OK
+    text = (tmp_path / "report.md").read_text(encoding="utf-8")
+    assert text.count("### Held-out poses") == 2                       # one per model
+    assert f"{len(held_out)} held-out poses were left out of the solve" in text
+    marked = [line for line in text.splitlines() if line.endswith(f"| {report.HELD_OUT_MARK} |")
+              and line.split(" | ")[0].lstrip("| ") in held_out]
+    assert len(marked) == 2 * len(held_out)                              # the marked rows of the two per-pose tables
+    assert "| held-out poses |" in text                                   # the comparison table
+    # A registration without a plan has no such subsection.
+    plain = tmp_path / "plain"
+    register.main(["--manifest", str(analysis_holdout["manifest"]), "--out", str(plain), "--model", "rigid",
+                   "--no-figures"])
+    report.main(["--registration", str(plain / "registration.json"), "--out", str(tmp_path / "plain.md")])
+    assert "Held-out poses" not in (tmp_path / "plain.md").read_text(encoding="utf-8")
+    # Comparing a session with a plan against one without leaves the held-out figures out.
+    compare.main(["--registration-a", str(registration), "--registration-b", str(plain / "registration.json"),
+                  "--out", str(tmp_path / "cmp2"), "--model", "rigid"])
+    assert "held_out" not in json.loads((tmp_path / "cmp2" / "comparison.json").read_text())["models"]["rigid"]
+
+
 @pytest.mark.parametrize("tool", [simulate, register, residual_maps, compare, report])
 def test_every_tool_answers_help(tool, capsys):
     with pytest.raises(SystemExit) as stop:

@@ -7,6 +7,7 @@ both segment and register identically (code design, Section 7.0):
       -> segment_target_plane(points, camera, params, prediction)
       -> board_plane_in_base(record.target_pose_positioner, target_offset_mm)
       -> register_planes over the poses whose segmentation succeeded
+      -> (optional) residuals_of_planes: the poses kept out of the solve, against the solved transform
 
 With a rough sensor-to-base transform the segmentation is given a prediction of the
 board's location (predicted region); without one it searches for the closest large plane.
@@ -20,8 +21,8 @@ from dataclasses import dataclass, field
 import numpy as np
 
 from planereg.core.planes import Plane, board_plane_in_base
-from planereg.core.registration import RegistrationParameters, RegistrationResult, RegistrationStatus, \
-    register_planes
+from planereg.core.registration import PoseResidual, RegistrationParameters, RegistrationResult, \
+    RegistrationStatus, register_planes, residuals_of_planes
 from planereg.core.segmentation import PlanePrediction, SegmentationParameters, SegmentationResult, \
     board_prediction, segment_target_plane
 from sphcal.features.depth_features import temporal_mean_points
@@ -137,3 +138,15 @@ def register_measurements(measurements: list[PoseMeasurement],
         return RegistrationResult(RegistrationStatus.TOO_FEW_POSES, "no pose was segmented successfully"), []
     result = register_planes([m.sensor_plane for m in usable], [m.base_plane for m in usable], params)
     return result, [m.pose_id for m in usable]
+
+
+def evaluate_measurements(measurements: list[PoseMeasurement], result: RegistrationResult) -> list[tuple[str, PoseResidual]]:
+    """Residuals, against the transform of the solved ``result``, of the measurements that were kept out of the
+    solve (held-out poses), computed with the solver's own residual function so that they compare with the
+    residuals of the fitted poses. Returns (pose id, residual) for the measurements whose segmentation
+    succeeded, in order; the others cannot be evaluated and are left out. Empty when ``result`` is not solved."""
+    usable = [m for m in measurements if m.ok]
+    if not usable or not result.solved():
+        return []
+    residuals = residuals_of_planes(result, [m.sensor_plane for m in usable], [m.base_plane for m in usable])
+    return [(m.pose_id, residual) for m, residual in zip(usable, residuals)]

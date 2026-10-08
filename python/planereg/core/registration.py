@@ -88,6 +88,17 @@ class PoseResidual:
     used: bool                    # False once outlier rejection dropped the pose
 
 
+@dataclass(frozen=True)
+class ResidualStatistics:
+    """RMS and maximum of the normal and offset residuals of a set of poses (the four figures the acceptance
+    thresholds are applied to)."""
+
+    rms_normal_degrees: float
+    max_normal_degrees: float
+    rms_offset_mm: float
+    max_offset_mm: float
+
+
 @dataclass
 class RegistrationResult:
     status: RegistrationStatus
@@ -167,6 +178,49 @@ def _residuals(rotation, translation, scale, sensor_planes, base_planes) -> list
     return out
 
 
+def _normalize_planes(sensor_planes: list[Plane], base_planes: list[Plane]) -> tuple[list[Plane], list[Plane]]:
+    """The planes as the solver uses them: sensor planes with a unit normal and d > 0 (any scale or sign is
+    accepted), base planes with a unit normal (their orientation is already meaningful: flange +z). Raises
+    ValueError for a plane without a direction."""
+    return ([p.normalized(origin_on_positive_side=True) for p in sensor_planes], [p.unit() for p in base_planes])
+
+
+def residual_statistics(residuals: list[PoseResidual]) -> ResidualStatistics:
+    """RMS and maximum of the normal angle and of the absolute offset residual over ``residuals`` (the caller
+    selects which poses count). All NaN for an empty list."""
+    if not residuals:
+        nan = float("nan")
+        return ResidualStatistics(nan, nan, nan, nan)
+    angles = np.array([r.normal_angle_degrees for r in residuals])
+    offsets = np.array([abs(r.offset_residual_mm) for r in residuals])
+    return ResidualStatistics(rms_normal_degrees=float(np.sqrt(np.mean(angles ** 2))),
+                              max_normal_degrees=float(angles.max()),
+                              rms_offset_mm=float(np.sqrt(np.mean(offsets ** 2))),
+                              max_offset_mm=float(offsets.max()))
+
+
+def within_acceptance_limits(statistics: ResidualStatistics, params: RegistrationParameters) -> bool:
+    """True when the four figures are at or below their thresholds (the RMS and the single-pose maximum of the
+    normal and of the offset residual): the acceptance test of the registration, also applied to held-out poses."""
+    return bool(statistics.rms_normal_degrees <= params.maximum_rms_normal_residual_degrees
+                and statistics.rms_offset_mm <= params.maximum_rms_offset_residual_mm
+                and statistics.max_normal_degrees <= params.maximum_normal_residual_degrees
+                and statistics.max_offset_mm <= params.maximum_offset_residual_mm)
+
+
+def residuals_of_planes(result: RegistrationResult, sensor_planes: list[Plane],
+                        base_planes: list[Plane]) -> list[PoseResidual]:
+    """Residuals, against the transform of a solved ``result``, of planes that took no part in the solve (held-out
+    poses): the same normalization and the same residual computation as the solver's, so the figures are
+    comparable with the residuals of the fitted poses. One entry per pose, in order, with ``used`` False.
+    Raises ValueError for a plane without a direction or when the result holds no transform."""
+    if not result.solved():
+        raise ValueError("the registration was not solved, so there is no transform to evaluate poses against")
+    sensor, base = _normalize_planes(sensor_planes, base_planes)
+    pairs = _residuals(result.sensor_to_base.rotation, result.sensor_to_base.translation, result.scale, sensor, base)
+    return [PoseResidual(angle, offset, False) for angle, offset in pairs]
+
+
 def _solve_once(sensor_planes, base_planes, params: RegistrationParameters):
     """One solve over the given (already normalized) planes. Returns a partially filled
     RegistrationResult with status SUCCESS when a transform was found."""
@@ -225,8 +279,7 @@ def register_planes(sensor_planes: list[Plane], base_planes: list[Plane],
         return RegistrationResult(RegistrationStatus.INVALID_INPUT,
                                   f"{len(sensor_planes)} sensor planes but {len(base_planes)} base planes")
     try:
-        sensor = [p.normalized(origin_on_positive_side=True) for p in sensor_planes]
-        base = [p.unit() for p in base_planes]   # orientation already meaningful: flange +z
+        sensor, base = _normalize_planes(sensor_planes, base_planes)
     except ValueError as error:
         return RegistrationResult(RegistrationStatus.INVALID_INPUT, str(error))
 
@@ -261,17 +314,13 @@ def register_planes(sensor_planes: list[Plane], base_planes: list[Plane],
         used[worst_index] = False
 
     assert final is not None
-    angles = np.array([r.normal_angle_degrees for r in final.residuals if r.used])
-    offsets = np.array([abs(r.offset_residual_mm) for r in final.residuals if r.used])
-    final.poses_used = int(angles.size)
-    final.rms_normal_residual_degrees = float(np.sqrt(np.mean(angles ** 2)))
-    final.max_normal_residual_degrees = float(angles.max())
-    final.rms_offset_residual_mm = float(np.sqrt(np.mean(offsets ** 2)))
-    final.max_offset_residual_mm = float(offsets.max())
-    accepted = (final.rms_normal_residual_degrees <= params.maximum_rms_normal_residual_degrees
-                and final.rms_offset_residual_mm <= params.maximum_rms_offset_residual_mm
-                and final.max_normal_residual_degrees <= params.maximum_normal_residual_degrees
-                and final.max_offset_residual_mm <= params.maximum_offset_residual_mm)
+    statistics = residual_statistics([r for r in final.residuals if r.used])
+    final.poses_used = sum(r.used for r in final.residuals)
+    final.rms_normal_residual_degrees = statistics.rms_normal_degrees
+    final.max_normal_residual_degrees = statistics.max_normal_degrees
+    final.rms_offset_residual_mm = statistics.rms_offset_mm
+    final.max_offset_residual_mm = statistics.max_offset_mm
+    accepted = within_acceptance_limits(statistics, params)
     final.status = RegistrationStatus.SUCCESS if accepted else RegistrationStatus.RESIDUALS_EXCEED_THRESHOLD
     final.message = ("registration succeeded" if accepted
                      else "registration solved, but a residual exceeds its acceptance threshold")

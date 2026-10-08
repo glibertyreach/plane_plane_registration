@@ -48,6 +48,10 @@ SESSION_PLAN_ARGUMENTS = ["--standoffs-mm", "700", "900", "--tilts-deg", "0", "2
                           "--lateral-positions", "2", "2", "--lateral-fill", "0.3", "--edge-margin-px", "10"]
 """A plan of 24 poses on the small camera: two standoffs, two lateral rows and columns, tilts 0 and 20."""
 SESSION_POSE_COUNT = 24
+SMALL_CAMERA_CHECK_ARGUMENTS = ["--min-mask-pixels", "100"]
+"""Check options for the small-camera sessions. Their boards are 300 to 900 pixels (the check's default minimum
+of 1000 suits the real sensor), so a minimum below every mask keeps the small-board flag out of the tests that
+are about other things; the tests of that flag give their own value instead."""
 
 BOOTSTRAP_POSES = (  # (center in the sensor frame, tilt deg, azimuth deg)
     ((0.0, 0.0, 700.0), 0.0, 0.0),
@@ -507,7 +511,7 @@ def test_bootstrap_target_offset_corrects_a_logged_flange_pose(tmp_path):
 # ---------------------------------------------------------------------------
 def test_check_passes_a_clean_session(session, rough_file, tmp_path, capsys):
     report = tmp_path / "check.json"
-    code = check_captures.main(["--manifest", str(session["manifest"]), "--sensor-in-base", str(rough_file),
+    code = check_captures.main([*SMALL_CAMERA_CHECK_ARGUMENTS, "--manifest", str(session["manifest"]), "--sensor-in-base", str(rough_file),
                                 "--out", str(report)])
     printed = capsys.readouterr()
     assert code == EXIT_OK, printed.out + printed.err
@@ -522,7 +526,7 @@ def test_check_passes_a_clean_session(session, rough_file, tmp_path, capsys):
 
 
 def test_check_passes_a_clean_session_without_a_rough_transform(session, capsys):
-    assert check_captures.main(["--manifest", str(session["manifest"])]) == EXIT_OK
+    assert check_captures.main([*SMALL_CAMERA_CHECK_ARGUMENTS, "--manifest", str(session["manifest"])]) == EXIT_OK
     assert "closest_large_plane" in capsys.readouterr().out
 
 
@@ -530,7 +534,7 @@ def test_check_flags_a_pose_whose_logged_position_was_shifted(session, rough_fil
     pose_id = list(session["poses"])[SHIFTED_POSE_INDEX]
     manifest = shifted_manifest(session["manifest"], pose_id, tmp_path / "shifted.json")
     report = tmp_path / "check.json"
-    code = check_captures.main(["--manifest", str(manifest), "--sensor-in-base", str(rough_file), "--out", str(report)])
+    code = check_captures.main([*SMALL_CAMERA_CHECK_ARGUMENTS, "--manifest", str(manifest), "--sensor-in-base", str(rough_file), "--out", str(report)])
     printed = capsys.readouterr()
     assert code == EXIT_FLAGGED
     assert f"WARNING: pose {pose_id}:" in printed.err and "offset residual too large" in printed.err
@@ -542,8 +546,45 @@ def test_check_flags_a_pose_whose_logged_position_was_shifted(session, rough_fil
     assert not by_id[pose_id]["in_fit"] and abs(abs(by_id[pose_id]["offset_residual_mm"]) - SHIFT_MM) < SHIFT_TOLERANCE_MM
     assert "VERDICT: 1 of" in printed.out
     # Without the outlier rounds the wrong pose pulls the solution and the verdict is still flagged.
-    assert check_captures.main(["--manifest", str(manifest), "--sensor-in-base", str(rough_file),
+    assert check_captures.main([*SMALL_CAMERA_CHECK_ARGUMENTS, "--manifest", str(manifest), "--sensor-in-base", str(rough_file),
                                 "--outlier-rounds", "0"]) == EXIT_FLAGGED
+
+
+def test_check_flags_a_small_board_image_instead_of_blaming_the_logged_pose(session, rough_file, tmp_path, capsys):
+    """A pose with a shifted logged position and a small mask: with the minimum below its mask the offset flag
+    is raised, with the minimum above it the small-board flag is raised and the offset flag is not (its residual
+    is expected to be poor); the pose stays in the registration either way."""
+    pose_id = list(session["poses"])[SHIFTED_POSE_INDEX]
+    manifest = shifted_manifest(session["manifest"], pose_id, tmp_path / "shifted.json")
+
+    def run(minimum_mask_pixels: int) -> tuple[dict, dict, str]:
+        report = tmp_path / f"check_{minimum_mask_pixels}.json"
+        check_captures.main(["--manifest", str(manifest), "--sensor-in-base", str(rough_file),
+                             "--min-mask-pixels", str(minimum_mask_pixels), "--out", str(report)])
+        document = json.loads(report.read_text())
+        return document, {pose["pose_id"]: pose for pose in document["poses"]}[pose_id], capsys.readouterr().out
+
+    document, pose, _ = run(0)
+    assert document["parameters"]["minimum_mask_pixels"] == 0
+    assert check_captures.FLAG_OFFSET in pose["flags"] and check_captures.FLAG_SMALL_MASK not in pose["flags"]
+
+    document, pose, printed = run(pose["pixels"] + 1)
+    assert check_captures.FLAG_SMALL_MASK in pose["flags"]
+    assert check_captures.FLAG_OFFSET not in pose["flags"] and check_captures.FLAG_NORMAL not in pose["flags"]
+    # The residuals are still computed and still show the shift; every pose smaller than the minimum is flagged,
+    # and the verdict line carries the new flag whole (its text holds a colon).
+    assert abs(abs(pose["offset_residual_mm"]) - SHIFT_MM) < SHIFT_TOLERANCE_MM
+    assert all((check_captures.FLAG_SMALL_MASK in other["flags"]) == (other["pixels"] <= pose["pixels"])
+               for other in document["poses"])
+    assert check_captures.FLAG_SMALL_MASK in document["verdict"] and check_captures.FLAG_SMALL_MASK in printed
+
+
+def test_check_minimum_mask_pixels_option_is_parsed_into_the_parameters():
+    default = check_captures.parameters_from_arguments(check_captures.build_parser().parse_args(["--manifest", "m.json"]))
+    given = check_captures.parameters_from_arguments(check_captures.build_parser().parse_args(
+        ["--manifest", "m.json", "--min-mask-pixels", "250"]))
+    assert default.minimum_mask_pixels == check_captures.CheckParameters().minimum_mask_pixels == 1000
+    assert given.minimum_mask_pixels == 250
 
 
 def test_check_target_offset_option_is_parsed_into_the_parameters():
@@ -559,7 +600,7 @@ def test_check_target_offset_corrects_a_logged_flange_pose(session, tmp_path, ca
     transform is the true one; without it the recovered transform is off by about D."""
     manifest = flange_logged_manifest(session["manifest"], tmp_path / "flange_manifest.json")
     corrected_report, plain_report = tmp_path / "corrected.json", tmp_path / "plain.json"
-    code = check_captures.main(["--manifest", str(manifest), "--target-offset-mm", str(FLANGE_OFFSET_MM),
+    code = check_captures.main([*SMALL_CAMERA_CHECK_ARGUMENTS, "--manifest", str(manifest), "--target-offset-mm", str(FLANGE_OFFSET_MM),
                                 "--out", str(corrected_report)])
     printed = capsys.readouterr()
     assert code == EXIT_OK, printed.out + printed.err
@@ -568,7 +609,7 @@ def test_check_target_offset_corrects_a_logged_flange_pose(session, tmp_path, ca
     solved = RigidTransform.from_matrix(np.array(corrected["registration"]["sensor_to_base"]).reshape(4, 4))
     assert solved.difference_from(TEST_SENSOR_TO_BASE)[0] < FLANGE_RECOVERY_TRANSLATION_TOLERANCE_MM
     # The same manifest without the option: the transform is wrong by about D.
-    check_captures.main(["--manifest", str(manifest), "--out", str(plain_report)])
+    check_captures.main([*SMALL_CAMERA_CHECK_ARGUMENTS, "--manifest", str(manifest), "--out", str(plain_report)])
     plain = json.loads(plain_report.read_text())
     plain_solved = RigidTransform.from_matrix(np.array(plain["registration"]["sensor_to_base"]).reshape(4, 4))
     assert plain_solved.difference_from(TEST_SENSOR_TO_BASE)[0] > FLANGE_UNCORRECTED_MIN_TRANSLATION_ERROR_MM
@@ -579,19 +620,19 @@ def test_check_border_test_uses_the_mask_not_the_background(tmp_path, capsys):
     every pose; the mask of the board stays clear of the border and nothing is flagged."""
     session = build_session(tmp_path / "wall", SESSION_PLAN_ARGUMENTS, wall=True)
     rough = sensor_in_base_file(tmp_path / "rough.json", TEST_SENSOR_TO_BASE.compose(ROUGH_ERROR))
-    code = check_captures.main(["--manifest", str(session["manifest"]), "--sensor-in-base", str(rough)])
+    code = check_captures.main([*SMALL_CAMERA_CHECK_ARGUMENTS, "--manifest", str(session["manifest"]), "--sensor-in-base", str(rough)])
     printed = capsys.readouterr()
     assert code == EXIT_OK, printed.out + printed.err
     assert "touches the image border" not in printed.err + printed.out
     # And the same wall session is also found without a prediction (the closest large plane is the board).
-    assert check_captures.main(["--manifest", str(session["manifest"])]) == EXIT_OK
+    assert check_captures.main([*SMALL_CAMERA_CHECK_ARGUMENTS, "--manifest", str(session["manifest"])]) == EXIT_OK
 
 
 def test_check_flags_a_board_cut_by_the_image_border(tmp_path, capsys):
     cut = ((0.0, 0.0, 700.0), 0.0, 0.0), ((-90.0, -40.0, 600.0), 25.0, 0.0), ((90.0, -40.0, 800.0), 25.0, 120.0), \
           ((90.0, 50.0, 650.0), 25.0, 240.0), ((-90.0, 50.0, 750.0), 20.0, 60.0), ((-290.0, 10.0, 700.0), 10.0, 300.0)
     manifest = bootstrap_session(tmp_path, cut)
-    code = check_captures.main(["--manifest", str(manifest)])
+    code = check_captures.main([*SMALL_CAMERA_CHECK_ARGUMENTS, "--manifest", str(manifest)])
     printed = capsys.readouterr()
     assert code == EXIT_FLAGGED
     assert "WARNING: pose jog5_x:" in printed.err and "image border" in printed.err
@@ -599,11 +640,11 @@ def test_check_flags_a_board_cut_by_the_image_border(tmp_path, capsys):
 
 
 def test_check_reports_an_unreadable_manifest_and_missing_files(session, tmp_path, capsys):
-    assert check_captures.main(["--manifest", str(tmp_path / "missing.json")]) == EXIT_INPUT_ERROR
+    assert check_captures.main([*SMALL_CAMERA_CHECK_ARGUMENTS, "--manifest", str(tmp_path / "missing.json")]) == EXIT_INPUT_ERROR
     assert capsys.readouterr().err.startswith("ERROR:")
-    assert check_captures.main(["--manifest", str(session["manifest"]), "--pose-log", str(tmp_path / "no.csv")]) == EXIT_INPUT_ERROR
+    assert check_captures.main([*SMALL_CAMERA_CHECK_ARGUMENTS, "--manifest", str(session["manifest"]), "--pose-log", str(tmp_path / "no.csv")]) == EXIT_INPUT_ERROR
     assert "no.csv" in capsys.readouterr().err
-    assert check_captures.main(["--manifest", str(session["manifest"]), "--sensor-in-base",
+    assert check_captures.main([*SMALL_CAMERA_CHECK_ARGUMENTS, "--manifest", str(session["manifest"]), "--sensor-in-base",
                                 str(tmp_path / "no.json")]) == EXIT_INPUT_ERROR
     assert "no.json" in capsys.readouterr().err
     # A capture file that cannot be read flags its pose instead of stopping the run.
@@ -613,7 +654,7 @@ def test_check_reports_an_unreadable_manifest_and_missing_files(session, tmp_pat
         if record.pose_id == victim:
             record.path = tmp_path / "gone.mc"
     manifest = write_manifest_json(tmp_path / "broken.json", records)
-    assert check_captures.main(["--manifest", str(manifest)]) == EXIT_FLAGGED
+    assert check_captures.main([*SMALL_CAMERA_CHECK_ARGUMENTS, "--manifest", str(manifest)]) == EXIT_FLAGGED
     assert f"WARNING: pose {victim}: capture files could not be read" in capsys.readouterr().err
 
 
@@ -668,7 +709,7 @@ def test_joint_sign_report_through_main(session, tmp_path, capsys):
     motions[: count // 2, 0] = -1.0           # joint 1: half the poses move each way -> warned
     log = write_pose_log(tmp_path / "pose_log.csv", pose_ids, motions)
     report = tmp_path / "check.json"
-    code = check_captures.main(["--manifest", str(session["manifest"]), "--pose-log", str(log), "--out", str(report)])
+    code = check_captures.main([*SMALL_CAMERA_CHECK_ARGUMENTS, "--manifest", str(session["manifest"]), "--pose-log", str(log), "--out", str(report)])
     printed = capsys.readouterr()
     assert code == EXIT_OK                    # the joint-sign report is informational
     assert "Joint-sign report" in printed.out
@@ -678,6 +719,6 @@ def test_joint_sign_report_through_main(session, tmp_path, capsys):
     assert np.isclose(joint_rows[1]["majority_fraction"], max(count // 2, count - count // 2) / count)
     # Without the columns the note is printed and the JSON has no joint report.
     bare = write_pose_log(tmp_path / "bare.csv", pose_ids, motions, extra_columns=False)
-    assert check_captures.main(["--manifest", str(session["manifest"]), "--pose-log", str(bare), "--out", str(report)]) == EXIT_OK
+    assert check_captures.main([*SMALL_CAMERA_CHECK_ARGUMENTS, "--manifest", str(session["manifest"]), "--pose-log", str(bare), "--out", str(report)]) == EXIT_OK
     assert "NOTE:" in capsys.readouterr().out
     assert json.loads(report.read_text())["joint_sign"] is None

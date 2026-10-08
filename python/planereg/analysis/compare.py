@@ -8,6 +8,9 @@ For every transform model the two registrations have in common (the final pass o
     * the per-pose residual differences (B minus A) over the poses that took part in both solves;
     * the RMS normal and offset residual of each session over the poses that took part in its own solve, and
       over the common poses;
+    * when both registrations have held-out poses (register ``--plan``), the RMS normal and offset residual of
+      each session's own held-out poses and their counts (they are not compared pose by pose: the two sessions
+      need not hold out the same poses);
     * the relative transform between the two solutions: the rotation angle between their rotations (deg), the
       distance between their translations (mm), and the ratio of their scales. A constant backlash is absorbed
       by the registration as a constant shift of the sensor placement, so procedure B shows a small residual
@@ -39,6 +42,8 @@ EXIT_INPUT_ERROR = 2
 """Exit codes: comparison written; an input must be fixed."""
 SCHEMA_VERSION = 1
 """Version of the comparison.json layout (report.py checks it)."""
+HELD_OUT_KEYS = ("rms_normal_residual_deg", "rms_offset_residual_mm", "count")
+"""Keys of the held-out section of registration.json that comparison.json carries for both sessions."""
 COMPARISON_FILE_NAME = "comparison.json"
 """Name of the JSON written into --out (the figure is residual_maps.COMPARISON_FILE)."""
 
@@ -80,6 +85,9 @@ def compare_model(block_a: dict, block_b: dict) -> dict:
     entry["b_smaller_rms"] = bool(
         entry["rms_normal_residual_deg"]["b"] < entry["rms_normal_residual_deg"]["a"]
         and entry["rms_offset_residual_mm"]["b"] < entry["rms_offset_residual_mm"]["a"])
+    held_out_a, held_out_b = block_a.get("held_out"), block_b.get("held_out")
+    if held_out_a is not None and held_out_b is not None:
+        entry["held_out"] = {key: {"a": held_out_a[key], "b": held_out_b[key]} for key in HELD_OUT_KEYS}
     if block_a["solved"] and block_b["solved"]:
         rigid_a, scale_a = transform_from_block(block_a)
         rigid_b, scale_b = transform_from_block(block_b)

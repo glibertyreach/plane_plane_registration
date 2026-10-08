@@ -18,7 +18,7 @@ What it checks, per pose (the frames of one commanded pose)
                     background) comes within ``border_margin_px`` of the image border, which means
                     the board is partly out of view.
     flags           unreadable, low valid fraction, border contact, segmentation failed, plane RMS
-                    above its limit.
+                    above its limit, board image too small.
 
 Logged frame. The manifest's pose is normally the board tool frame (origin at the center of the board's
 front face). If the controller can only report the flange pose, log that and pass ``--target-offset-mm D``
@@ -35,6 +35,12 @@ would pull the solution and flag innocent poses through leverage. The
 normal spread and the similarity spread of the set, with a warning below the registration defaults
 (``RegistrationParameters``). A pose whose logged position was shifted shows up as an offset
 residual; a wrong tool frame or a mis-typed rotation as a normal residual.
+
+Small board image. A pose whose segmented board has fewer pixels than ``minimum_mask_pixels`` (a board at
+the far standoff and a steep tilt, at the limit of the sensor's reach) gives a noisy plane, and its
+residuals are poor for that reason alone, not because anything was logged wrongly. Such a pose is flagged
+FLAG_SMALL_MASK instead of the two residual flags (the advice is to drop it from the plan, not to
+re-capture it); it stays in the registration as before.
 
 A set whose normal spread or similarity spread is below the registration minimum also makes the
 verdict flagged (exit code 1), whatever the poses show.
@@ -85,6 +91,8 @@ FLAG_LOW_VALID = "low valid fraction (board flickers or is not read)"
 FLAG_BORDER = "mask touches the image border (board partly out of view)"
 FLAG_SEGMENTATION = "segmentation failed (board plane not found)"
 FLAG_PLANE_RMS = "plane fit residual too large"
+FLAG_SMALL_MASK = ("board image too small (few pixels: the pose is at the limit of the sensor's reach; "
+                   "drop it from the plan rather than re-capture it)")
 FLAG_NORMAL = "normal residual too large (check the logged orientation and the tool frame)"
 FLAG_OFFSET = "offset residual too large (check the logged position and the tool frame)"
 FLAG_NOT_REGISTERED = "not used in the registration"
@@ -92,8 +100,9 @@ REASON_REGISTRATION = "registration failed"
 REASON_NORMAL_SPREAD = "normal spread below the registration minimum"
 REASON_SIMILARITY_SPREAD = "similarity spread below the registration minimum"
 """Reasons (besides pose flags) that make the verdict flagged."""
-ADVICE = ("re-capture the flagged poses, check the tool frame and the logged poses; if the spreads are low, "
-          "tilt the board more and vary the standoff")
+ADVICE = ("re-capture the flagged poses (except those whose board image is too small: drop those from the plan), "
+          "check the tool frame and the logged poses; if the spreads are low, tilt the board more and vary the "
+          "standoff")
 """Advice printed with a flagged verdict."""
 
 
@@ -108,6 +117,10 @@ class CheckParameters:
     fraction are left out of the temporal-mean image."""
     border_margin_px: int = DEFAULT_BORDER_MARGIN_PX
     """Mask pixels this close to the image border mean the board is cut off."""
+    minimum_mask_pixels: int = 1000
+    """A board image with fewer segmented pixels than this is flagged as too small to give a reliable plane
+    (and its residual flags are suppressed, since its residuals are expected to be poor). A placeholder until
+    real sessions set it."""
     target_offset_mm: float = 0.0
     """Distance from the logged frame's origin to the board's front face along the logged frame's +z, in mm:
     0 when the logged pose is the board tool frame, the flange-to-board-face distance D when the controller
@@ -185,6 +198,8 @@ def check_pose(measurement: PoseMeasurement, params: CheckParameters) -> PoseChe
         check.flags.append(FLAG_BORDER)
     if check.plane_rms_mm > params.plane_rms_warn_mm:
         check.flags.append(FLAG_PLANE_RMS)
+    if check.pixels < params.minimum_mask_pixels:
+        check.flags.append(FLAG_SMALL_MASK)
     return check
 
 
@@ -201,7 +216,9 @@ def registration_parameters(params: CheckParameters) -> RegistrationParameters:
 
 def apply_registration(checks: list[PoseCheck], measurements: list[PoseMeasurement], result: RegistrationResult,
                        used_ids: list[str], params: CheckParameters) -> None:
-    """Fill in each registered pose's residuals and flag the ones above their limits."""
+    """Fill in each registered pose's residuals and flag the ones above their limits. A pose already flagged
+    FLAG_SMALL_MASK gets its residuals recorded but not flagged: they are expected to be poor, and the advice
+    to check the logged pose would be wrong."""
     if not result.solved():
         return
     by_id = {check.pose_id: check for check in checks}
@@ -210,6 +227,8 @@ def apply_registration(checks: list[PoseCheck], measurements: list[PoseMeasureme
         check.in_fit = residual.used
         check.normal_residual_deg = residual.normal_angle_degrees
         check.offset_residual_mm = residual.offset_residual_mm
+        if FLAG_SMALL_MASK in check.flags:
+            continue
         if residual.normal_angle_degrees > params.normal_residual_warn_deg:
             check.flags.append(FLAG_NORMAL)
         if abs(residual.offset_residual_mm) > params.offset_residual_warn_mm:
@@ -304,6 +323,12 @@ def format_joint_table(rows: list[JointSignRow], params: CheckParameters) -> str
     return "\n".join(lines)
 
 
+def verdict_reason(flag: str) -> str:
+    """The reason a flag counts under in the verdict line: the flag without a trailing detail after a colon
+    (the segmentation message), except FLAG_SMALL_MASK, whose own text contains a colon."""
+    return flag if flag == FLAG_SMALL_MASK else flag.split(":")[0]
+
+
 def verdict_line(checks: list[PoseCheck], extra_reasons: list[str]) -> str:
     """The final verdict: how many poses are flagged and why."""
     flagged = [c for c in checks if c.flags]
@@ -312,7 +337,7 @@ def verdict_line(checks: list[PoseCheck], extra_reasons: list[str]) -> str:
     reasons: dict[str, int] = {}
     for check in flagged:
         for flag in check.flags:
-            key = flag.split(":")[0]
+            key = verdict_reason(flag)
             reasons[key] = reasons.get(key, 0) + 1
     parts = [f"{count} x {reason}" for reason, count in reasons.items()] + extra_reasons
     return f"VERDICT: {len(flagged)} of {len(checks)} poses flagged ({'; '.join(parts)}). Advice: {ADVICE}."
@@ -362,6 +387,9 @@ def build_parser() -> argparse.ArgumentParser:
                         help="distance from the logged frame's origin to the board's front face along its +z, in mm; "
                              "0 when the logged frame is the board tool frame, the flange-face-to-front-face distance D "
                              "of the procedure when the flange pose was logged (default %(default)s)")
+    parser.add_argument("--min-mask-pixels", type=int, default=d.minimum_mask_pixels,
+                        help="flag a board image with fewer segmented pixels than this as too small for a reliable "
+                             "plane; its residual flags are then suppressed (default %(default)s)")
     parser.add_argument("--normal-residual-warn-deg", type=float, default=d.normal_residual_warn_deg,
                         help="flag a pose whose normal residual exceeds this (default %(default)s)")
     parser.add_argument("--offset-residual-warn-mm", type=float, default=d.offset_residual_warn_mm,
@@ -379,7 +407,8 @@ def parameters_from_arguments(args: argparse.Namespace) -> CheckParameters:
     """The CheckParameters of the parsed command line."""
     return CheckParameters(
         plane_rms_warn_mm=args.plane_rms_warn_mm, min_valid_fraction=args.min_valid_fraction,
-        border_margin_px=args.border_margin_px, target_offset_mm=args.target_offset_mm,
+        border_margin_px=args.border_margin_px, minimum_mask_pixels=args.min_mask_pixels,
+        target_offset_mm=args.target_offset_mm,
         normal_residual_warn_deg=args.normal_residual_warn_deg,
         offset_residual_warn_mm=args.offset_residual_warn_mm, outlier_rounds=args.outlier_rounds,
         joint_sign_warn_fraction=args.joint_sign_warn_fraction)

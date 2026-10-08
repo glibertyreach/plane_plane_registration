@@ -3,7 +3,8 @@ comparison of two sessions, the Markdown report and the synthetic session genera
 
 Every tool is a command-line module with ``main(argv) -> int``:
 
-    python3 -m planereg.analysis.register       manifest -> registration.json, segmentation.npz, figures
+    python3 -m planereg.analysis.register       manifest (+ plan: held-out poses) -> registration.json,
+                                                segmentation.npz, figures
     python3 -m planereg.analysis.residual_maps  registration.json -> figures (also called by register)
     python3 -m planereg.analysis.compare        two registration.json files -> comparison.json / .png
     python3 -m planereg.analysis.report         registration.json (+ comparison.json) -> report.md

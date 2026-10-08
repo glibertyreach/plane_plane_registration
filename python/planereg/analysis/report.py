@@ -7,8 +7,10 @@ Markdown report of a registration (code design 8.4).
 The report holds, per transform model (the final pass of each): the verdict against the acceptance thresholds,
 the transform, the residual summary, the spreads against their minimums, the per-pass numbers, the segmentation
 summary (methods, pixel counts, poses whose segmentation failed, poses rejected as outliers), the per-pose
-residual table, the errors against a known truth when ``register`` was given one, and, when a comparison is
-given, its RMS values and relative transform; finally the list of figures found next to the inputs.
+residual table (held-out poses marked), the held-out poses when ``register`` was given a plan (count, RMS and
+maximum residuals against the same limits), the errors against a known truth when ``register`` was given one,
+and, when a comparison is given, its RMS values and relative transform; finally the list of figures found next
+to the inputs.
 
 Only fixed sentences with the numbers filled in are produced, no free prose, so the same data always gives the
 same text.
@@ -42,6 +44,8 @@ MATRIX_DIGITS = 6
 """Decimals of the transform matrix entries."""
 FIGURE_PATTERN = "*.png"
 """Figure files looked for in the figures directory next to registration.json and in comparison.json's directory."""
+HELD_OUT_MARK = "held out"
+"""Entry of the per-pose table's "held out" column for a pose that was kept out of the solve."""
 PIXEL_PERCENTILES = (0, 50, 100)
 """Percentiles of the mask pixel counts quoted in the segmentation summary: minimum, median, maximum."""
 
@@ -64,6 +68,36 @@ def table(header: list[str], rows: list[list[str]]) -> list[str]:
     return lines
 
 
+def limit_rows(rms_normal, max_normal, rms_offset, max_offset, limits: dict) -> list[list[str]]:
+    """The rows (quantity, value, limit, result) of the four residual figures against the acceptance thresholds;
+    the same for the fitted poses and for the held-out poses."""
+    return [
+        ["RMS normal residual (deg)", number(rms_normal), number(limits["maximum_rms_normal_residual_degrees"]),
+         verdict_word(rms_normal <= limits["maximum_rms_normal_residual_degrees"])],
+        ["maximum normal residual (deg)", number(max_normal), number(limits["maximum_normal_residual_degrees"]),
+         verdict_word(max_normal <= limits["maximum_normal_residual_degrees"])],
+        ["RMS offset residual (mm)", number(rms_offset), number(limits["maximum_rms_offset_residual_mm"]),
+         verdict_word(rms_offset <= limits["maximum_rms_offset_residual_mm"])],
+        ["maximum offset residual (mm)", number(max_offset), number(limits["maximum_offset_residual_mm"]),
+         verdict_word(max_offset <= limits["maximum_offset_residual_mm"])],
+    ]
+
+
+def held_out_lines(held_out: dict, limits: dict) -> list[str]:
+    """The "Held-out poses" subsection of a model: what the solve did not see, judged against the fit's limits."""
+    lines = ["### Held-out poses", ""]
+    lines += [f"{held_out['count']} held-out poses were left out of the solve and evaluated against its transform."]
+    unevaluated = held_out["unevaluated_pose_ids"]
+    if unevaluated:
+        lines += [f"Held-out poses that could not be evaluated (segmentation failed): {', '.join(unevaluated)}."]
+    if not held_out["count"]:
+        return lines + [""]
+    rows = limit_rows(held_out["rms_normal_residual_deg"], held_out["max_normal_residual_deg"],
+                      held_out["rms_offset_residual_mm"], held_out["max_offset_residual_mm"], limits)
+    lines += ["", f"Verdict on the held-out poses: {verdict_word(held_out['held_out_within_limits'])}."]
+    return lines + [""] + table(["quantity", "value", "limit", "result"], rows) + [""]
+
+
 def model_section(model: str, entry: dict, limits: dict, truth_entry: dict | None) -> list[str]:
     """The report lines of one model."""
     block = final_block(entry)
@@ -82,21 +116,12 @@ def model_section(model: str, entry: dict, limits: dict, truth_entry: dict | Non
               f"scale {number(block['scale'], MATRIX_DIGITS)}.", ""]
 
     lines += ["### Residuals against the acceptance thresholds", ""]
-    rows = [
-        ["RMS normal residual (deg)", number(block["rms_normal_residual_deg"]),
-         number(limits["maximum_rms_normal_residual_degrees"]),
-         verdict_word(block["rms_normal_residual_deg"] <= limits["maximum_rms_normal_residual_degrees"])],
-        ["maximum normal residual (deg)", number(block["max_normal_residual_deg"]),
-         number(limits["maximum_normal_residual_degrees"]),
-         verdict_word(block["max_normal_residual_deg"] <= limits["maximum_normal_residual_degrees"])],
-        ["RMS offset residual (mm)", number(block["rms_offset_residual_mm"]),
-         number(limits["maximum_rms_offset_residual_mm"]),
-         verdict_word(block["rms_offset_residual_mm"] <= limits["maximum_rms_offset_residual_mm"])],
-        ["maximum offset residual (mm)", number(block["max_offset_residual_mm"]),
-         number(limits["maximum_offset_residual_mm"]),
-         verdict_word(block["max_offset_residual_mm"] <= limits["maximum_offset_residual_mm"])],
-    ]
+    rows = limit_rows(block["rms_normal_residual_deg"], block["max_normal_residual_deg"],
+                      block["rms_offset_residual_mm"], block["max_offset_residual_mm"], limits)
     lines += table(["quantity", "value", "limit", "result"], rows) + [""]
+
+    if block.get("held_out") is not None:
+        lines += held_out_lines(block["held_out"], limits)
 
     lines += ["### Spreads of the pose set", ""]
     spread_rows = [["normal spread", number(block["normal_spread"]), number(limits["minimum_normal_spread"]),
@@ -140,8 +165,9 @@ def model_section(model: str, entry: dict, limits: dict, truth_entry: dict | Non
     lines += ["### Residual of every pose", ""]
     rows = [[pose["pose_id"], str(pose["method"]), str(pose["pixels"]), number(pose["plane_rms_mm"]),
              number(pose["normal_residual_deg"]), number(pose["offset_residual_mm"]),
-             "yes" if pose["used"] else "no"] for pose in poses]
-    lines += table(["pose", "method", "pixels", "plane RMS (mm)", "normal (deg)", "offset (mm)", "used"], rows) + [""]
+             "yes" if pose["used"] else "no", HELD_OUT_MARK if pose.get("held_out") else ""] for pose in poses]
+    lines += table(["pose", "method", "pixels", "plane RMS (mm)", "normal (deg)", "offset (mm)", "used", "held out"],
+                   rows) + [""]
 
     if truth_entry:
         lines += ["### Errors against the known truth", ""]
@@ -165,6 +191,14 @@ def comparison_section(comparison: dict) -> list[str]:
                  number(entry["rms_offset_residual_mm"]["b"])],
                 ["poses used", str(entry["poses_used_a"]), str(entry["poses_used_b"])]]
         lines += table(["quantity", labels["a"], labels["b"]], rows) + [""]
+        held_out = entry.get("held_out")
+        if held_out is not None:
+            lines += table(["held-out poses", labels["a"], labels["b"]],
+                           [["RMS normal residual (deg)", number(held_out["rms_normal_residual_deg"]["a"]),
+                             number(held_out["rms_normal_residual_deg"]["b"])],
+                            ["RMS offset residual (mm)", number(held_out["rms_offset_residual_mm"]["a"]),
+                             number(held_out["rms_offset_residual_mm"]["b"])],
+                            ["held-out poses", str(held_out["count"]["a"]), str(held_out["count"]["b"])]]) + [""]
         lines += [f"Session {labels['b']} has "
                   f"{'the smaller' if entry['b_smaller_rms'] else 'NOT the smaller'} residual RMS of the two "
                   f"({entry['poses_common']} poses in common)."]
@@ -194,7 +228,13 @@ def build_report(document: dict, comparison: dict | None, registration_path: Pat
     lines = ["# Registration report", "",
              f"Manifest: {document['manifest']}", "",
              f"Rough transform for the first pass: {document['sensor_in_base'] or 'none (closest large plane)'}.",
-             f"Outlier rejection rounds: {limits['outlier_rejection_rounds']}.", ""]
+             f"Outlier rejection rounds: {limits['outlier_rejection_rounds']}."]
+    plan = document.get("plan")
+    if plan is not None:
+        lines += [f"Pose plan (held-out poses): {plan['path']}; {len(plan['poses_not_captured'])} of "
+                  f"{plan['poses_planned']} plan poses were not captured, "
+                  f"{len(plan['manifest_poses_not_in_plan'])} manifest poses are not in the plan."]
+    lines += [""]
     truth = document.get("truth_comparison") or {}
     for model in document["model_order"]:
         lines += model_section(model, document["models"][model], limits, truth.get(model))

@@ -9,7 +9,7 @@ the segmentation.npz next to it (and, for the per-pixel maps, the capture files 
 
 Figures, per model (the result of the final pass), PNG at 150 dpi
     pose_residuals.png          normal residual (deg) and offset residual (mm) against pose index, two
-                                panels; poses that took part in the solve and rejected poses are distinguished
+                                panels; poses that took part in the solve and rejected or held-out poses are distinguished
     normal_residual_field.png   vector map over the image: an arrow at every board center for the normal
                                 residual vector R n_k - m_k seen in the sensor's image axes, one panel per
                                 standoff; a quiver key states the arrow length in degrees
@@ -299,6 +299,16 @@ def standoff_groups(poses: list[dict], params: FigureParameters) -> tuple[list[l
     return groups, [float(np.mean([p["board_center_sensor_mm"][2] for p in group])) for group in groups]
 
 
+def unused_label(poses: list[dict]) -> str:
+    """Legend text for the poses that took no part in the solve: "held out" when all of them were kept out by a
+    plan, "rejected" when none was, else both."""
+    unused = [pose for pose in poses if not pose["used"]]
+    held_out = [pose for pose in unused if pose.get("held_out")]
+    if unused and len(held_out) == len(unused):
+        return "held out"
+    return "rejected or held out" if held_out else "rejected"
+
+
 def image_axes(axis, image_size_px: tuple[int, int], xlabel: str = "u (pixel)", ylabel: str = "v (pixel)") -> None:
     """Configure an axes as the image frame: pixel coordinates, v downward, equal aspect."""
     axis.set_xlim(0, image_size_px[0])
@@ -328,7 +338,7 @@ def plot_pose_residuals(plt, block: dict, limits: dict, path: Path, params: Figu
         figure, axes = new_figure(plt, len(panels), 1, params)
         for axis, (ylabel, values, panel_limits) in zip(axes[:, 0], panels):
             for selected, color, marker, label in ((used, SERIES_COLOR_BLUE, MARKER_CIRCLE, "used in the solve"),
-                                                   (~used, SERIES_COLOR_ORANGE, MARKER_DIAMOND, "rejected")):
+                                                   (~used, SERIES_COLOR_ORANGE, MARKER_DIAMOND, unused_label(poses))):
                 if selected.any():
                     axis.scatter(indices[selected], values[selected], s=marker_area_pt2(), c=color, marker=marker,
                                  edgecolors=SURFACE_COLOR, linewidths=pixels_to_points(MARKER_EDGE_PX), zorder=3)
@@ -338,7 +348,7 @@ def plot_pose_residuals(plt, block: dict, limits: dict, path: Path, params: Figu
             axis.set_ylabel(ylabel)
         handles = [marker_handle("used in the solve", SERIES_COLOR_BLUE, MARKER_CIRCLE)] if used.any() else []
         if not used.all():
-            handles.append(marker_handle("rejected", SERIES_COLOR_ORANGE, MARKER_DIAMOND))
+            handles.append(marker_handle(unused_label(poses), SERIES_COLOR_ORANGE, MARKER_DIAMOND))
         add_legend(figure, handles + [line_handle("acceptance limit", INK_SECONDARY, THRESHOLD_LINE_STYLE)])
         axes[-1, 0].set_xlabel("pose index (order in the manifest)")
         axes[0, 0].set_title("Residual of every pose after registration")
@@ -388,7 +398,7 @@ def plot_normal_residual_field(plt, block: dict, image_size_px: tuple[int, int],
             axis.set_title(f"standoff {depths[index]:.0f} mm  ({len(group)} poses)", pad=TITLE_PAD_PT)
         if any(not p["used"] for p in poses):
             add_legend(figure, [marker_handle("used in the solve", INK_SECONDARY, MARKER_CIRCLE),
-                                marker_handle("rejected", INK_SECONDARY, MARKER_CIRCLE, hollow=True)])
+                                marker_handle(unused_label(poses), INK_SECONDARY, MARKER_CIRCLE, hollow=True)])
         figure.suptitle("Normal residual R n - m in the image axes (arrow length in degrees, common scale)")
         return save_figure(plt, figure, path)
 
@@ -426,7 +436,7 @@ def plot_offset_residual_field(plt, block: dict, image_size_px: tuple[int, int],
             axis.set_title(f"standoff {depths[index]:.0f} mm  ({len(groups[index])} poses)")
         if any_rejected:
             add_legend(figure, [marker_handle("used in the solve", INK_SECONDARY, MARKER_CIRCLE),
-                                marker_handle("rejected", INK_SECONDARY, MARKER_DIAMOND)])
+                                marker_handle(unused_label(poses), INK_SECONDARY, MARKER_DIAMOND)])
         figure.colorbar(ScalarMappable(norm=norm, cmap=colormap), ax=axes.ravel().tolist(),
                         label="signed offset residual (mm)")
         figure.suptitle("Offset residual at the board centers")

@@ -965,6 +965,7 @@ usage: check_captures.py [-h] --manifest PATH [--sensor-in-base PATH]
                          [--min-valid-fraction MIN_VALID_FRACTION]
                          [--border-margin-px BORDER_MARGIN_PX]
                          [--target-offset-mm TARGET_OFFSET_MM]
+                         [--min-mask-pixels MIN_MASK_PIXELS]
                          [--normal-residual-warn-deg NORMAL_RESIDUAL_WARN_DEG]
                          [--offset-residual-warn-mm OFFSET_RESIDUAL_WARN_MM]
                          [--outlier-rounds OUTLIER_ROUNDS]
@@ -999,6 +1000,10 @@ options:
                         logged frame is the board tool frame, the flange-
                         face-to-front-face distance D of the procedure
                         when the flange pose was logged (default 0.0)
+  --min-mask-pixels MIN_MASK_PIXELS
+                        flag a board image with fewer segmented pixels
+                        than this as too small for a reliable plane; its
+                        residual flags are then suppressed (default 1000)
   --normal-residual-warn-deg NORMAL_RESIDUAL_WARN_DEG
                         flag a pose whose normal residual exceeds this
                         (default 1.0)

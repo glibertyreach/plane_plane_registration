@@ -11,7 +11,8 @@ from scipy.spatial.transform import Rotation
 
 from planereg.core.planes import Plane, board_plane_in_base, predicted_sensor_plane, transform_plane
 from planereg.core.registration import (RegistrationParameters, RegistrationStatus, TransformModel,
-                                        register_planes, spread)
+                                        register_planes, residual_statistics, residuals_of_planes, spread,
+                                        within_acceptance_limits)
 from planereg.core.segmentation import SegmentationParameters, board_prediction, segment_target_plane
 from sphcal.geometry.camera import PinholeCamera
 from sphcal.geometry.transforms import RigidTransform
@@ -40,6 +41,8 @@ STANDOFF_RANGE_MM = (500.0, 850.0)
 TILT_HALF_RANGE_DEG = 30.0
 EXACT_ROTATION_TOL_DEG = 1e-7
 EXACT_TRANSLATION_TOL_MM = 1e-6
+HELD_OUT_OFFSET_ERROR_MM = 8.0
+"""Offset error given to the plane that is evaluated without being fitted."""
 NOISY_ROTATION_TOL_DEG = 0.05
 NOISY_TRANSLATION_TOL_MM = 0.5
 INJECTED_SCALE = 1.02
@@ -148,6 +151,38 @@ def test_registration_rejects_a_single_outlier_pose():
     assert result.status == RegistrationStatus.SUCCESS, result.message
     assert [k for k, r in enumerate(result.residuals) if not r.used] == [3]
     assert np.linalg.norm(result.sensor_to_base.translation - SENSOR_TO_BASE.translation) < 1e-5
+
+
+def test_residuals_of_unfitted_planes_use_the_solvers_own_residuals():
+    """Planes evaluated against a solved transform get the residuals the solver gives them as fitted poses, and a
+    plane with an offset error shows that error; the statistics and the verdict use the acceptance limits."""
+    rng = np.random.default_rng(SEED)
+    sensor_planes, base_planes = [], []
+    for board_to_sensor in random_board_poses(rng, POSE_COUNT):
+        base_plane = board_plane_in_base(SENSOR_TO_BASE.compose(board_to_sensor))
+        base_planes.append(base_plane)
+        sensor_planes.append(predicted_sensor_plane(SENSOR_TO_BASE, base_plane))
+    sensor_planes[2] = Plane(sensor_planes[2].normal, sensor_planes[2].offset + HELD_OUT_OFFSET_ERROR_MM)
+    result = register_planes(sensor_planes, base_planes)
+    evaluated = residuals_of_planes(result, sensor_planes, base_planes)
+    assert [r.used for r in evaluated] == [False] * POSE_COUNT
+    for fitted, again in zip(result.residuals, evaluated):
+        assert again.normal_angle_degrees == pytest.approx(fitted.normal_angle_degrees, abs=1e-12)
+        assert again.offset_residual_mm == pytest.approx(fitted.offset_residual_mm, abs=1e-12)
+    # The same planes against the transform of a fit that never saw plane 2 show its error in full.
+    clean = [k for k in range(POSE_COUNT) if k != 2]
+    clean_result = register_planes([sensor_planes[k] for k in clean], [base_planes[k] for k in clean])
+    held_out = residuals_of_planes(clean_result, [sensor_planes[2]], [base_planes[2]])[0]
+    assert abs(abs(held_out.offset_residual_mm) - HELD_OUT_OFFSET_ERROR_MM) < EXACT_TRANSLATION_TOL_MM
+    statistics = residual_statistics([held_out])
+    limits = RegistrationParameters()
+    assert statistics.rms_offset_mm == pytest.approx(abs(held_out.offset_residual_mm))
+    assert not within_acceptance_limits(statistics, limits)
+    assert within_acceptance_limits(residual_statistics(
+        residuals_of_planes(clean_result, [sensor_planes[k] for k in clean], [base_planes[k] for k in clean])), limits)
+    assert np.isnan(residual_statistics([]).rms_normal_degrees)
+    with pytest.raises(ValueError):
+        residuals_of_planes(register_planes(sensor_planes[:1], base_planes[:1]), sensor_planes, base_planes)
 
 
 def test_parallel_normals_are_degenerate_and_orthogonal_spread_is_known():

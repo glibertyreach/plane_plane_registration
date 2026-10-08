@@ -3,7 +3,7 @@ Registration of a capture session: the sensor-to-base transform from the board p
 
     python3 -m planereg.analysis.register --manifest manifest.json --out DIR
         [--sensor-in-base PATH] [--model rigid|similarity|both] [--outlier-rounds N]
-        [--target-offset-mm D] [--figures | --no-figures] [--truth truth.json]
+        [--target-offset-mm D] [--plan poses.csv] [--figures | --no-figures] [--truth truth.json]
 
 Two passes (code design 8.1), both through the shared pipeline of ``planereg.core.pipeline``:
 
@@ -19,16 +19,28 @@ For the similarity model the pass-2 prediction uses the pass-1 rotation, transla
 prediction is scale-aware). The plane itself is always fitted to the measured points, never taken from the
 prediction.
 
+Held-out poses (--plan). The pose plan of the capture tools (poses.csv) tags a fraction of its poses as held
+out (column ``holdout``, 1 or 0, keyed by ``pose_id``). With --plan those poses are left out of the registration
+solve of every model and pass, and are instead evaluated against the transform that was solved without them:
+their normal and offset residuals are computed with the solver's own residual function (so they compare with
+the residuals of the fitted poses) and summarized in the pass block's ``held_out`` section, with a verdict
+against the same four acceptance thresholds as the fit (maximum RMS and maximum single pose, normal and offset).
+A manifest pose that the plan does not list (a re-capture whose id carries a suffix) is treated as not held out
+and fitted as usual; plan poses that were not captured are counted in a warning. Without --plan nothing is
+held out and the ``held_out`` section is null.
+
 Outputs in --out
     registration.json    parameters; per model and pass: transform (4 x 4, rotation, translation, scale),
-                         status, spreads, RMS and maximum residuals, rejected poses and per pose the
-                         segmentation statistics and residuals; optionally the errors against a truth file
+                         status, spreads, RMS and maximum residuals, rejected poses, the held-out section and
+                         per pose the segmentation statistics and residuals; optionally the errors against a
+                         truth file
     segmentation.npz     the mask of every pose, key "<model>_pass<n>__<pose_id>" (the masks differ per model
                          and pass, so a bare pose id would be ambiguous)
     figures/<model>/     the figures of ``planereg.analysis.residual_maps`` when enabled
 
-Exit codes: 0 every requested model passed its acceptance thresholds, 1 a model was solved but flagged or
-could not be solved, 2 an input must be fixed.
+Exit codes: 0 every requested model passed its acceptance thresholds (and, with --plan, its held-out poses are
+within the same limits), 1 a model was solved but flagged, its held-out poses exceed the limits, or it could not
+be solved, 2 an input must be fixed.
 
 Frames and units: sensor S, base B; the transform is X: S -> B, X = [c R, s; 0 1]; millimeters, degrees.
 """
@@ -37,15 +49,18 @@ from __future__ import annotations
 import argparse
 import json
 import sys
+import csv
 from dataclasses import asdict, dataclass, field, replace
 from enum import Enum
 from pathlib import Path
 
 import numpy as np
 
-from planereg.core.pipeline import PipelineParameters, PoseMeasurement, measure_all, register_measurements
-from planereg.core.registration import (RegistrationParameters, RegistrationResult, RegistrationStatus,
-                                        TransformModel)
+from planereg.core.pipeline import (PipelineParameters, PoseMeasurement, evaluate_measurements, measure_all,
+                                    register_measurements)
+from planereg.core.registration import (PoseResidual, RegistrationParameters, RegistrationResult,
+                                        RegistrationStatus, TransformModel, residual_statistics,
+                                        within_acceptance_limits)
 from planereg.core.segmentation import SegmentationParameters
 from sphcal.cli.plan_poses import PlanInputError, load_sensor_in_base
 from sphcal.geometry.transforms import RigidTransform
@@ -85,6 +100,15 @@ PREDICTION_NONE = "none"
 PREDICTION_SENSOR_IN_BASE = "sensor_in_base"
 PREDICTION_PASS_ONE = "pass1_transform"
 """How a pass found the candidate region of each pose."""
+
+PLAN_POSE_ID_COLUMN = "pose_id"
+PLAN_HOLDOUT_COLUMN = "holdout"
+"""Columns of the plan's poses.csv that this tool reads: the pose id and the held-out tag."""
+PLAN_HOLDOUT_YES = "1"
+PLAN_HOLDOUT_NO = "0"
+"""The two values of the holdout column (``plan_poses`` writes ``int(holdout)``)."""
+WARNING_LIST_LIMIT = 5
+"""Pose ids named in a warning about poses missing from the manifest or from the plan; the rest are counted."""
 
 POSE_COLUMN_WIDTH = 30
 """Width of the pose-id column of the console table."""
@@ -161,6 +185,10 @@ class PassRun:
     measurements: list[PoseMeasurement]
     result: RegistrationResult
     pose_ids: list[str]                         # poses in the registration, in the order of result.residuals
+    held_out_ids: frozenset[str] | None = None  # poses kept out of the solve; None when no plan was given
+    held_out_residuals: dict[str, PoseResidual] = field(default_factory=dict)
+    """Residuals of the held-out poses against the solved transform (those whose segmentation succeeded, in the
+    order of the manifest; empty when the pass did not solve)."""
 
 
 @dataclass
@@ -184,27 +212,119 @@ def model_parameters(params: RegisterParameters, model: str) -> RegistrationPara
     return replace(params.registration, transform_model=TransformModel(model))
 
 
+def register_fit_poses(measurements: list[PoseMeasurement], registration_parameters: RegistrationParameters,
+                       held_out_ids: frozenset[str] | None, name: str, prediction: str) -> PassRun:
+    """One pass: register the measurements that are not held out, then evaluate the held-out ones against the
+    transform that came out (nothing is evaluated when the registration did not solve)."""
+    held_out = held_out_ids or frozenset()
+    result, pose_ids = register_measurements([m for m in measurements if m.pose_id not in held_out],
+                                             registration_parameters)
+    held_out_residuals = dict(evaluate_measurements([m for m in measurements if m.pose_id in held_out], result))
+    return PassRun(name, prediction, measurements, result, pose_ids, held_out_ids, held_out_residuals)
+
+
 def run_model(capture_set: CaptureSet, params: RegisterParameters, model: str,
-              pass_one_measurements: list[PoseMeasurement], pass_one_prediction: str) -> ModelRun:
+              pass_one_measurements: list[PoseMeasurement], pass_one_prediction: str,
+              held_out_ids: frozenset[str] | None = None) -> ModelRun:
     """Register the pass-1 measurements with ``model``; if that solves, segment every pose again with the
-    prediction from the solution and register again."""
+    prediction from the solution and register again. Held-out poses (None: no plan) are segmented like the
+    others in both passes but take no part in either solve; each pass evaluates them against its own solution."""
     registration_parameters = model_parameters(params, model)
-    result_one, ids_one = register_measurements(pass_one_measurements, registration_parameters)
-    pass_one = PassRun(PASS_ONE, pass_one_prediction, pass_one_measurements, result_one, ids_one)
-    if not result_one.solved():
+    pass_one = register_fit_poses(pass_one_measurements, registration_parameters, held_out_ids, PASS_ONE,
+                                  pass_one_prediction)
+    if not pass_one.result.solved():
         return ModelRun(model, registration_parameters, pass_one, None)
-    measurements_two = measure_all(capture_set, params.pipeline, result_one.sensor_to_base, result_one.scale)
-    result_two, ids_two = register_measurements(measurements_two, registration_parameters)
-    pass_two = PassRun(PASS_TWO, PREDICTION_PASS_ONE, measurements_two, result_two, ids_two)
+    measurements_two = measure_all(capture_set, params.pipeline, pass_one.result.sensor_to_base,
+                                   pass_one.result.scale)
+    pass_two = register_fit_poses(measurements_two, registration_parameters, held_out_ids, PASS_TWO,
+                                  PREDICTION_PASS_ONE)
     return ModelRun(model, registration_parameters, pass_one, pass_two)
 
 
 def register_session(capture_set: CaptureSet, params: RegisterParameters,
-                     rough_sensor_to_base: RigidTransform | None = None) -> list[ModelRun]:
-    """Pass 1 once (it does not depend on the model), then both passes' registration per model."""
+                     rough_sensor_to_base: RigidTransform | None = None,
+                     held_out_ids: frozenset[str] | None = None) -> list[ModelRun]:
+    """Pass 1 once (it does not depend on the model), then both passes' registration per model.
+    ``held_out_ids`` are the poses kept out of every solve and evaluated instead (None: no plan, none held out)."""
     pass_one_measurements = measure_all(capture_set, params.pipeline, rough_sensor_to_base)
     prediction = PREDICTION_NONE if rough_sensor_to_base is None else PREDICTION_SENSOR_IN_BASE
-    return [run_model(capture_set, params, model, pass_one_measurements, prediction) for model in params.models]
+    return [run_model(capture_set, params, model, pass_one_measurements, prediction, held_out_ids)
+            for model in params.models]
+
+
+# ---------------------------------------------------------------------------
+# The pose plan: which poses are held out
+# ---------------------------------------------------------------------------
+@dataclass(frozen=True)
+class PlanHoldout:
+    """What the register tool takes from a plan's poses.csv."""
+
+    pose_ids: tuple[str, ...]            # every pose of the plan, in file order
+    held_out_ids: frozenset[str]         # those tagged held out
+
+
+def load_plan_holdout(path: Path) -> PlanHoldout:
+    """Read the pose ids and the holdout tags of a plan's poses.csv. Raises ValueError, saying what to fix, for a
+    file that cannot be read, lacks the pose_id or holdout column, or tags a pose with something but 1 or 0."""
+    try:
+        with Path(path).open("r", newline="", encoding="utf-8-sig") as handle:
+            reader = csv.DictReader(handle)
+            columns = [name.strip() for name in (reader.fieldnames or [])]
+            rows = [{(key or "").strip(): value for key, value in row.items()} for row in reader]
+    except OSError as error:
+        raise ValueError(f"cannot read the plan {path}: {error.strerror}") from None
+    for column in (PLAN_POSE_ID_COLUMN, PLAN_HOLDOUT_COLUMN):
+        if column not in columns:
+            raise ValueError(f"the plan {path} has no '{column}' column (it should be the poses.csv written by "
+                             "planereg.capture.plan_poses)")
+    pose_ids, held_out = [], set()
+    for row in rows:
+        pose_id = (row.get(PLAN_POSE_ID_COLUMN) or "").strip()
+        tag = (row.get(PLAN_HOLDOUT_COLUMN) or "").strip()
+        if not pose_id:
+            continue
+        if tag not in (PLAN_HOLDOUT_YES, PLAN_HOLDOUT_NO):
+            raise ValueError(f"the plan {path} tags pose {pose_id} '{tag}' in its '{PLAN_HOLDOUT_COLUMN}' column; "
+                             f"expected {PLAN_HOLDOUT_YES} (held out) or {PLAN_HOLDOUT_NO}")
+        pose_ids.append(pose_id)
+        if tag == PLAN_HOLDOUT_YES:
+            held_out.add(pose_id)
+    return PlanHoldout(tuple(pose_ids), frozenset(held_out))
+
+
+def named_ids(pose_ids: list[str]) -> str:
+    """The first WARNING_LIST_LIMIT ids, comma separated, with the number of the rest."""
+    text = ", ".join(pose_ids[:WARNING_LIST_LIMIT])
+    return text + (f" and {len(pose_ids) - WARNING_LIST_LIMIT} more" if len(pose_ids) > WARNING_LIST_LIMIT else "")
+
+
+def plan_coverage(plan: PlanHoldout, manifest_pose_ids: list[str]) -> dict:
+    """How the plan and the manifest overlap: the held-out ids present in the manifest, the plan poses that
+    were not captured, and the manifest poses the plan does not list (re-captures with a suffix, extra poses;
+    these are fitted, never held out)."""
+    captured = set(manifest_pose_ids)
+    planned = set(plan.pose_ids)
+    return {
+        "held_out_ids": frozenset(plan.held_out_ids & captured),
+        "plan_poses": len(plan.pose_ids),
+        "plan_poses_not_captured": [pid for pid in plan.pose_ids if pid not in captured],
+        "held_out_not_captured": [pid for pid in plan.pose_ids if pid in plan.held_out_ids and pid not in captured],
+        "manifest_poses_not_in_plan": [pid for pid in manifest_pose_ids if pid not in planned],
+    }
+
+
+def plan_warnings(coverage: dict) -> list[str]:
+    """Warning lines about plan poses that were not captured and manifest poses the plan does not list."""
+    warnings = []
+    missing = coverage["plan_poses_not_captured"]
+    if missing:
+        warnings.append(f"WARNING: {len(missing)} of {coverage['plan_poses']} plan poses were not captured "
+                        f"({len(coverage['held_out_not_captured'])} of them tagged held out): {named_ids(missing)}")
+    extra = coverage["manifest_poses_not_in_plan"]
+    if extra:
+        warnings.append(f"WARNING: {len(extra)} manifest pose(s) are not in the plan (re-captures?) and are treated "
+                        f"as not held out: {named_ids(extra)}")
+    return warnings
 
 
 # ---------------------------------------------------------------------------
@@ -214,8 +334,10 @@ def pose_entries(run: PassRun) -> list[dict]:
     """One entry per pose of the pass (all poses, segmented or not): segmentation statistics, board center,
     and, for poses that entered the solve, the residuals. ``normal_residual_sensor`` is the normal residual
     vector R^t (R n_k - m_k) = n_k - R^t m_k in the sensor frame (measured minus predicted normal), whose x
-    and y components are along the image's u and v axes."""
-    residual_of = dict(zip(run.pose_ids, run.result.residuals))
+    and y components are along the image's u and v axes. A held-out pose (``held_out`` true) is never ``used``;
+    its residuals are those against the transform solved without it."""
+    residual_of = {**dict(zip(run.pose_ids, run.result.residuals)), **run.held_out_residuals}
+    held_out_ids = run.held_out_ids or frozenset()
     rotation = run.result.sensor_to_base.rotation
     entries = []
     for measurement in run.measurements:
@@ -234,6 +356,7 @@ def pose_entries(run: PassRun) -> list[dict]:
             "board_center_uv": list(measurement.board_center_uv),
             "board_center_sensor_mm": measurement.board_center_sensor_mm,
             "touches_border": measurement.touches_border,
+            "held_out": measurement.pose_id in held_out_ids,
             "used": False, "normal_residual_deg": float("nan"), "offset_residual_mm": float("nan"),
             "normal_residual_sensor": [float("nan")] * 3,
         }
@@ -248,7 +371,32 @@ def pose_entries(run: PassRun) -> list[dict]:
     return entries
 
 
-def pass_block(run: PassRun) -> dict:
+def held_out_block(run: PassRun, limits: RegistrationParameters) -> dict | None:
+    """The ``held_out`` section of a pass block, or None when no plan was given: the held-out poses that could
+    be evaluated with their residuals (``poses``), those whose segmentation failed or that had no solution to be
+    evaluated against (``unevaluated_pose_ids``), ``count`` of the evaluated, their RMS and maximum residuals
+    (NaN when none), and ``held_out_within_limits``: the fit's four acceptance thresholds (``limits``) applied to
+    them (null when there are none to judge)."""
+    if run.held_out_ids is None:
+        return None
+    residuals = list(run.held_out_residuals.values())
+    statistics = residual_statistics(residuals)
+    return {
+        "count": len(residuals),
+        "poses": [{"pose_id": pose_id, "normal_residual_deg": residual.normal_angle_degrees,
+                   "offset_residual_mm": residual.offset_residual_mm}
+                  for pose_id, residual in run.held_out_residuals.items()],
+        "unevaluated_pose_ids": [m.pose_id for m in run.measurements
+                                 if m.pose_id in run.held_out_ids and m.pose_id not in run.held_out_residuals],
+        "rms_normal_residual_deg": statistics.rms_normal_degrees,
+        "max_normal_residual_deg": statistics.max_normal_degrees,
+        "rms_offset_residual_mm": statistics.rms_offset_mm,
+        "max_offset_residual_mm": statistics.max_offset_mm,
+        "held_out_within_limits": within_acceptance_limits(statistics, limits) if residuals else None,
+    }
+
+
+def pass_block(run: PassRun, limits: RegistrationParameters) -> dict:
     """The result block of one pass (see the module docstring and residual_maps / compare / report)."""
     result = run.result
     block = {
@@ -264,6 +412,7 @@ def pass_block(run: PassRun) -> dict:
         "max_offset_residual_mm": result.max_offset_residual_mm,
         "matrix": None, "rotation": None, "rotation_vector_deg": None, "translation_mm": None, "scale": None,
         "rejected_pose_ids": [pid for pid, r in zip(run.pose_ids, result.residuals) if not r.used],
+        "held_out": held_out_block(run, limits),
         "poses": pose_entries(run),
     }
     if result.solved():
@@ -274,17 +423,24 @@ def pass_block(run: PassRun) -> dict:
 
 
 def registration_document(manifest_path: Path, params: RegisterParameters, runs: list[ModelRun],
-                          image_size_px: tuple[int, int], rough_path: Path | None, outlier_rounds: int) -> dict:
-    """The registration.json dictionary."""
+                          image_size_px: tuple[int, int], rough_path: Path | None, outlier_rounds: int,
+                          plan_path: Path | None = None, coverage: dict | None = None) -> dict:
+    """The registration.json dictionary. ``plan_path`` and ``coverage`` (from plan_coverage) describe the pose
+    plan given with --plan; both None when there was none."""
     models = {}
     for run in runs:
-        entry = {PASS_ONE: pass_block(run.pass_one), "final_pass": run.final().name}
-        entry[PASS_TWO] = None if run.pass_two is None else pass_block(run.pass_two)
+        limits = run.registration_parameters
+        entry = {PASS_ONE: pass_block(run.pass_one, limits), "final_pass": run.final().name}
+        entry[PASS_TWO] = None if run.pass_two is None else pass_block(run.pass_two, limits)
         models[run.model] = entry
     return json_safe({
         "schema_version": SCHEMA_VERSION,
         "manifest": Path(manifest_path).resolve(),
         "sensor_in_base": None if rough_path is None else Path(rough_path).resolve(),
+        "plan": None if plan_path is None else {
+            "path": Path(plan_path).resolve(), "poses_planned": coverage["plan_poses"],
+            "poses_not_captured": coverage["plan_poses_not_captured"],
+            "manifest_poses_not_in_plan": coverage["manifest_poses_not_in_plan"]},
         "segmentation_file": SEGMENTATION_FILE_NAME,
         "image_size_px": list(image_size_px),
         "parameters": {
@@ -340,6 +496,27 @@ def truth_comparison(document: dict, truth: dict) -> dict:
 # ---------------------------------------------------------------------------
 # Console output
 # ---------------------------------------------------------------------------
+def held_out_summary(final: PassRun, model: str, limits: RegistrationParameters) -> str | None:
+    """The console line for the held-out poses of a model's final pass, or None when no plan was given."""
+    block = held_out_block(final, limits)
+    if block is None:
+        return None
+    line = f"{model:<10} {final.name}: held out: {block['count']} poses"
+    if block["count"]:
+        line += (f", RMS normal {block['rms_normal_residual_deg']:.3f} deg, "
+                 f"RMS offset {block['rms_offset_residual_mm']:.3f} mm, "
+                 f"{'within limits' if block['held_out_within_limits'] else 'EXCEEDS'}")
+    if block["unevaluated_pose_ids"]:
+        line += f" ({len(block['unevaluated_pose_ids'])} more could not be evaluated: {named_ids(block['unevaluated_pose_ids'])})"
+    return line
+
+
+def held_out_exceed_limits(run: ModelRun) -> bool:
+    """True when the model's final pass has held-out poses and they exceed the acceptance thresholds."""
+    block = held_out_block(run.final(), run.registration_parameters)
+    return block is not None and block["held_out_within_limits"] is False
+
+
 def print_summary(runs: list[ModelRun], comparison: dict | None) -> None:
     """One line per model and pass, then the per-pose table of the final pass of each model."""
     for run in runs:
@@ -358,6 +535,9 @@ def print_summary(runs: list[ModelRun], comparison: dict | None) -> None:
             print(line)
             if not result.solved():
                 print(f"WARNING: {run.model} {pass_run.name}: {result.message}")
+        held_out_line = held_out_summary(run.final(), run.model, run.registration_parameters)
+        if held_out_line is not None:
+            print(held_out_line)
     for run in runs:
         final = run.final()
         print(f"\npose table, {run.model} {final.name}")
@@ -366,7 +546,8 @@ def print_summary(runs: list[ModelRun], comparison: dict | None) -> None:
         for entry in pose_entries(final):
             print(f"{entry['pose_id']:<{POSE_COLUMN_WIDTH}} {str(entry['method']):<20} {entry['pixels']:>7} "
                   f"{entry['plane_rms_mm']:>7.3f} {entry['normal_residual_deg']:>10.3f} "
-                  f"{entry['offset_residual_mm']:>10.3f}  {'yes' if entry['used'] else 'NO'}")
+                  f"{entry['offset_residual_mm']:>10.3f}  "
+                  f"{'held out' if entry['held_out'] else 'yes' if entry['used'] else 'NO'}")
 
 
 # ---------------------------------------------------------------------------
@@ -397,6 +578,9 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--max-offset-mm", type=float, default=registration.maximum_offset_residual_mm)
     parser.add_argument("--min-normal-spread", type=float, default=registration.minimum_normal_spread)
     parser.add_argument("--min-similarity-spread", type=float, default=registration.minimum_similarity_spread)
+    parser.add_argument("--plan", type=Path, default=None,
+                        help="the plan's poses.csv: poses tagged held out (holdout = 1) are left out of the solve "
+                             "and evaluated against it instead")
     parser.add_argument("--figures", action=argparse.BooleanOptionalAction, default=True,
                         help="write the residual figures (needs matplotlib)")
     parser.add_argument("--pixel-maps", type=int, default=None,
@@ -446,15 +630,20 @@ def main(argv: list[str] | None = None) -> int:
         if args.sensor_in_base is not None:
             rough, _, _ = load_sensor_in_base(args.sensor_in_base, BOOTSTRAP_RESIDUAL_WARN_MM)
         truth = None if args.truth is None else json.loads(args.truth.read_text(encoding="utf-8"))
+        plan = None if args.plan is None else load_plan_holdout(args.plan)
     except (ValueError, PlanInputError, OSError) as error:
         print(f"ERROR: {error}", file=sys.stderr)
         return EXIT_INPUT_ERROR
+    coverage = None if plan is None else plan_coverage(plan, capture_set.pose_ids())
+    if coverage is not None:
+        for warning in plan_warnings(coverage):
+            print(warning)
 
-    runs = register_session(capture_set, params, rough)
+    runs = register_session(capture_set, params, rough, None if coverage is None else coverage["held_out_ids"])
     first_mask = next((m.segmentation.mask for m in runs[0].pass_one.measurements if m.segmentation is not None), None)
     image_size = (0, 0) if first_mask is None else (first_mask.shape[1], first_mask.shape[0])
     document = registration_document(args.manifest, params, runs, image_size, args.sensor_in_base,
-                                     params.registration.outlier_rejection_rounds)
+                                     params.registration.outlier_rejection_rounds, args.plan, coverage)
     comparison = None
     if truth is not None:
         comparison = json_safe(truth_comparison(document, truth))
@@ -479,7 +668,8 @@ def main(argv: list[str] | None = None) -> int:
                                                  figure_parameters)
             print(f"wrote {len(written)} figure(s) for {model} to {args.out / FIGURE_DIRECTORY_NAME / model}")
     print(f"wrote {args.out / REGISTRATION_FILE_NAME}")
-    flagged = any(not run.final().result.status == RegistrationStatus.SUCCESS for run in runs)
+    flagged = any(run.final().result.status != RegistrationStatus.SUCCESS or held_out_exceed_limits(run)
+                  for run in runs)
     return EXIT_FLAGGED if flagged else EXIT_OK
 
 
