@@ -390,9 +390,9 @@
    "title": "Check each capture set before the next run",
    "cards": [
     {
-     "head": "Board not found, cut off or too small",
-     "flag": "segmentation failed; valid fraction below 50 percent; mask at the border; under 1,000 pixels",
-     "text": "Pose copied wrongly, something flat closer than the board, the board outside the field, or exposure. Too small: the pose is at the sensor's limit; drop it, do not re-capture"
+     "head": "Board not found or too small",
+     "flag": "not found; valid fraction below 50 percent; at the border; under 1,000 pixels",
+     "text": "Copied wrongly, something flat closer than the board, out of the field, or exposure. Too small: drop the pose"
     },
     {
      "head": "Plane residual",
